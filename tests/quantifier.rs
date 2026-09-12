@@ -147,6 +147,11 @@ fn eliminates_a_universal_variable() {
     let formula = Formula::forall(1, body);
     let eliminated = eliminate_one_variable(&formula, 0, 1).unwrap();
     assert_eq!(eliminated, Formula::True);
+    for value in [-3, 0, 5] {
+        let mut assignment = BTreeMap::new();
+        assignment.insert(0, BigRational::from_integer(value.into()));
+        assert_eq!(eliminated.evaluate(&assignment), Some(true));
+    }
 
     let cells = decompose_univariate(&[UnivariatePolynomial::from_integers(&[0, 0, 1])]);
     assert!(cells
