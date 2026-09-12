@@ -1,4 +1,8 @@
-use quantifier_elimination::qe::evaluate::{decide_univariate, eliminate_univariate};
+use quantifier_elimination::algebra::univariate::UnivariatePolynomial;
+use quantifier_elimination::cad::lifting::decompose_univariate;
+use quantifier_elimination::qe::evaluate::{
+    decide_univariate, eliminate_one_variable, eliminate_univariate,
+};
 use quantifier_elimination::qe::normalize::to_nnf;
 use quantifier_elimination::qe::simplify::simplify;
 use quantifier_elimination::{Formula, Polynomial, Relation, RenameError};
@@ -103,4 +107,24 @@ fn alpha_renames_without_capturing_free_variables() {
     let y = Polynomial::variable(1);
     let capturing = Formula::exists(0, Formula::atom(y, Relation::Equal));
     assert_eq!(capturing.alpha_rename(0, 1), Err(RenameError::WouldCapture));
+}
+
+#[test]
+fn eliminates_one_variable_and_preserves_the_free_variable() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let body = Formula::atom(y.clone() * y - x.clone(), Relation::Equal);
+    let formula = Formula::exists(1, body);
+    let eliminated = eliminate_one_variable(&formula, 0, 1).unwrap();
+
+    assert_eq!(
+        eliminated.free_variables().into_iter().collect::<Vec<_>>(),
+        vec![0]
+    );
+    let cells = decompose_univariate(&[UnivariatePolynomial::from_integers(&[0, 1])]);
+    let values = cells
+        .iter()
+        .map(|cell| cell.evaluate_formula(&eliminated).unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(values, vec![false, true, true]);
 }

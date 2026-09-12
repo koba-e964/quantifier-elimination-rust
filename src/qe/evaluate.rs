@@ -1,14 +1,25 @@
 use crate::algebra::univariate::UnivariatePolynomial;
-use crate::cad::lifting::{decompose_univariate, FormulaEvaluationError};
+use crate::cad::lifting::lift_two_variables;
+use crate::cad::lifting::{
+    decompose_univariate, synthesize_cell_conditions, FormulaEvaluationError,
+};
+use crate::cad::projection::ProjectionError;
 use crate::formula::{Atom, Formula, Quantifier};
 use crate::polynomial::Monomial;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum QuantifierEvaluationError {
     Formula(FormulaEvaluationError),
+    Projection(ProjectionError),
     NestedQuantifier,
     NonUnivariatePolynomial,
     WrongVariable,
+}
+
+impl From<ProjectionError> for QuantifierEvaluationError {
+    fn from(error: ProjectionError) -> Self {
+        Self::Projection(error)
+    }
 }
 
 impl From<FormulaEvaluationError> for QuantifierEvaluationError {
@@ -52,6 +63,45 @@ pub fn eliminate_univariate(formula: &Formula) -> Result<Formula, QuantifierEval
     } else {
         Formula::False
     })
+}
+
+/// Eliminate one quantified variable from a formula with exactly one free
+/// variable. The current implementation uses the two-dimensional CAD layer.
+pub fn eliminate_one_variable(
+    formula: &Formula,
+    free_variable: usize,
+    quantified_variable: usize,
+) -> Result<Formula, QuantifierEvaluationError> {
+    let Formula::Quantified {
+        quantifier,
+        variable,
+        body,
+    } = formula
+    else {
+        return Err(QuantifierEvaluationError::WrongVariable);
+    };
+    let mut body_free_variables = body.free_variables();
+    body_free_variables.remove(variable);
+    if *variable != quantified_variable
+        || body_free_variables != [free_variable].into_iter().collect()
+    {
+        return Err(QuantifierEvaluationError::WrongVariable);
+    }
+    let lifting = lift_two_variables(formula, &[free_variable, quantified_variable])?;
+    let truth_table = lifting.truth_table(body)?;
+    let base_truth = truth_table
+        .iter()
+        .map(|row| match quantifier {
+            Quantifier::Exists => row.iter().any(|value| *value),
+            Quantifier::Forall => row.iter().all(|value| *value),
+        })
+        .collect::<Vec<_>>();
+    Ok(synthesize_cell_conditions(
+        &lifting.base_cells,
+        &lifting.base_polynomials,
+        &base_truth,
+        free_variable,
+    ))
 }
 
 fn collect_polynomials(
