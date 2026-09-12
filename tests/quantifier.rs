@@ -1,4 +1,4 @@
-use quantifier_elimination::qe::evaluate::decide_univariate;
+use quantifier_elimination::qe::evaluate::{decide_univariate, eliminate_univariate};
 use quantifier_elimination::{Formula, Polynomial, Relation};
 
 #[test]
@@ -28,4 +28,15 @@ fn decides_a_universal_polynomial_formula() {
         Formula::atom(square, Relation::GreaterOrEqual),
     ))
     .unwrap());
+}
+
+#[test]
+fn eliminates_a_closed_formula_to_a_quantifier_free_constant() {
+    let x = Polynomial::variable(0);
+    let formula = Formula::exists(
+        0,
+        Formula::atom(x.clone() * x + Polynomial::integer(1), Relation::Equal),
+    );
+
+    assert_eq!(eliminate_univariate(&formula).unwrap(), Formula::False);
 }

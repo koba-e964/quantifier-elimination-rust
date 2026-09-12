@@ -45,6 +45,15 @@ pub fn decide_univariate(formula: &Formula) -> Result<bool, QuantifierEvaluation
     })
 }
 
+/// Eliminate the sole quantifier from a closed one-variable formula.
+pub fn eliminate_univariate(formula: &Formula) -> Result<Formula, QuantifierEvaluationError> {
+    Ok(if decide_univariate(formula)? {
+        Formula::True
+    } else {
+        Formula::False
+    })
+}
+
 fn collect_polynomials(
     formula: &Formula,
     polynomials: &mut Vec<UnivariatePolynomial>,
