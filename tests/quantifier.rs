@@ -1,4 +1,5 @@
 use quantifier_elimination::qe::evaluate::{decide_univariate, eliminate_univariate};
+use quantifier_elimination::qe::normalize::to_nnf;
 use quantifier_elimination::{Formula, Polynomial, Relation};
 
 #[test]
@@ -39,4 +40,19 @@ fn eliminates_a_closed_formula_to_a_quantifier_free_constant() {
     );
 
     assert_eq!(eliminate_univariate(&formula).unwrap(), Formula::False);
+}
+
+#[test]
+fn normalizes_negation_and_dualizes_quantifiers() {
+    let x = Polynomial::variable(0);
+    let formula = Formula::Not(Box::new(Formula::forall(
+        0,
+        Formula::atom(x, Relation::Less),
+    )));
+    let expected = Formula::exists(
+        0,
+        Formula::atom(Polynomial::variable(0), Relation::GreaterOrEqual),
+    );
+
+    assert_eq!(to_nnf(&formula), expected);
 }
