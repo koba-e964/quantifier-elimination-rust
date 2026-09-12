@@ -63,3 +63,11 @@ fn determines_sign_at_an_algebraic_root() {
         1
     );
 }
+
+#[test]
+fn identifies_rational_algebraic_samples_when_available() {
+    let defining = UnivariatePolynomial::from_integers(&[0, 1]);
+    let root = defining.isolate_real_roots().remove(0);
+    let algebraic = quantifier_elimination::AlgebraicReal::new(defining, root);
+    assert_eq!(algebraic.rational_value(), Some(BigRational::zero()));
+}

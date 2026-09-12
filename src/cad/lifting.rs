@@ -31,6 +31,18 @@ pub enum FormulaEvaluationError {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub enum LiftingError {
+    Projection(ProjectionError),
+    AlgebraicBaseSampleUnsupported,
+}
+
+impl From<ProjectionError> for LiftingError {
+    fn from(error: ProjectionError) -> Self {
+        Self::Projection(error)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TwoDimensionalLifting {
     pub projection_stack: ProjectionStack,
     pub base_polynomials: Vec<UnivariatePolynomial>,
@@ -223,7 +235,7 @@ pub fn lift_over_rational_sample(
 pub fn lift_two_variables(
     formula: &Formula,
     variable_order: &[Variable; 2],
-) -> Result<TwoDimensionalLifting, ProjectionError> {
+) -> Result<TwoDimensionalLifting, LiftingError> {
     let stack = build_projection_stack(formula, variable_order)?;
     let base_polynomials = stack.levels[1]
         .iter()
@@ -254,6 +266,11 @@ pub fn lift_two_variables(
     let mut lifted_cells = Vec::new();
     let mut lifted_signs = Vec::new();
     for cell in &base_cells {
+        if let Some(exact_sample) = &cell.exact_sample {
+            if exact_sample.rational_value().is_none() {
+                return Err(LiftingError::AlgebraicBaseSampleUnsupported);
+            }
+        }
         let mut values = std::collections::BTreeMap::new();
         values.insert(variable_order[0], cell.sample.clone());
         let specialized = original

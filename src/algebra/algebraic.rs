@@ -1,6 +1,6 @@
 use super::univariate::{RootInterval, UnivariatePolynomial};
 use num_bigint::BigInt;
-use num_traits::Signed;
+use num_traits::{Signed, Zero};
 
 /// An exact real algebraic number represented by a defining polynomial and an
 /// isolating interval containing exactly one of its real roots.
@@ -23,6 +23,11 @@ impl AlgebraicReal {
             polynomial: self.polynomial.clone(),
             interval: self.polynomial.refine_root(&self.interval, maximum_width),
         }
+    }
+
+    pub fn rational_value(&self) -> Option<num_rational::BigRational> {
+        let midpoint = (&self.interval.lower + &self.interval.upper) / num_bigint::BigInt::from(2);
+        (self.polynomial.evaluate(&midpoint).is_zero()).then_some(midpoint)
     }
 
     pub fn sign_of(&self, polynomial: &UnivariatePolynomial) -> i8 {

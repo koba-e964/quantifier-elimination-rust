@@ -1,7 +1,7 @@
 use crate::algebra::univariate::UnivariatePolynomial;
 use crate::cad::lifting::lift_two_variables;
 use crate::cad::lifting::{
-    decompose_univariate, synthesize_cell_conditions, FormulaEvaluationError,
+    decompose_univariate, synthesize_cell_conditions, FormulaEvaluationError, LiftingError,
 };
 use crate::cad::projection::ProjectionError;
 use crate::formula::{Atom, Formula, Quantifier};
@@ -11,6 +11,7 @@ use crate::polynomial::Monomial;
 pub enum QuantifierEvaluationError {
     Formula(FormulaEvaluationError),
     Projection(ProjectionError),
+    Lifting(LiftingError),
     NestedQuantifier,
     NonUnivariatePolynomial,
     WrongVariable,
@@ -19,6 +20,12 @@ pub enum QuantifierEvaluationError {
 impl From<ProjectionError> for QuantifierEvaluationError {
     fn from(error: ProjectionError) -> Self {
         Self::Projection(error)
+    }
+}
+
+impl From<LiftingError> for QuantifierEvaluationError {
+    fn from(error: LiftingError) -> Self {
+        Self::Lifting(error)
     }
 }
 
