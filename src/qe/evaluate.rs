@@ -66,6 +66,10 @@ pub fn eliminate_univariate(formula: &Formula) -> Result<Formula, QuantifierEval
 }
 
 /// Dispatch to the currently supported quantifier-elimination paths.
+///
+/// Currently supported inputs are closed one-variable formulas and formulas
+/// with one quantified variable plus one free variable. General multivariate
+/// formula synthesis is not enabled yet.
 pub fn eliminate(formula: &Formula) -> Result<Formula, QuantifierEvaluationError> {
     let Formula::Quantified { variable, .. } = formula else {
         return Err(QuantifierEvaluationError::WrongVariable);

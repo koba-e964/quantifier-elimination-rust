@@ -6,7 +6,9 @@ use quantifier_elimination::qe::evaluate::{
 };
 use quantifier_elimination::qe::normalize::to_nnf;
 use quantifier_elimination::qe::simplify::simplify;
-use quantifier_elimination::{Formula, Polynomial, Relation, RenameError};
+use quantifier_elimination::{
+    Formula, Polynomial, QuantifierEvaluationError, Relation, RenameError,
+};
 use std::collections::BTreeMap;
 
 #[test]
@@ -175,4 +177,19 @@ fn dispatches_supported_elimination_paths() {
     let y = Polynomial::variable(1);
     let parameterized = Formula::exists(1, Formula::atom(y.clone() * y - x, Relation::Equal));
     assert!(eliminate(&parameterized).unwrap().is_quantifier_free());
+}
+
+#[test]
+fn reports_unsupported_elimination_shapes() {
+    let x = Polynomial::variable(0);
+    let z = Polynomial::variable(2);
+    let formula = Formula::exists(1, Formula::atom(x + z, Relation::Equal));
+    assert_eq!(
+        quantifier_elimination::eliminate(&formula),
+        Err(QuantifierEvaluationError::WrongVariable)
+    );
+    assert_eq!(
+        quantifier_elimination::eliminate(&Formula::True),
+        Err(QuantifierEvaluationError::WrongVariable)
+    );
 }
