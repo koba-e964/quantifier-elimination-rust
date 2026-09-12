@@ -12,6 +12,7 @@ pub mod polynomial;
 pub mod qe;
 
 pub use algebra::algebraic::AlgebraicReal;
+pub use algebra::coefficient::{AlgebraicPolynomial, ExactReal};
 pub use algebra::univariate::{RootInterval, UnivariatePolynomial};
 pub use formula::{Atom, Formula, Quantifier, Relation, RenameError};
 pub use polynomial::{Monomial, Polynomial, Variable, VariableNames};
