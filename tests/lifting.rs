@@ -2,8 +2,8 @@ use num_rational::BigRational;
 use num_traits::Zero;
 use quantifier_elimination::algebra::univariate::UnivariatePolynomial;
 use quantifier_elimination::cad::lifting::{
-    cell_condition, decompose_univariate, lift_over_rational_sample, lift_two_variables,
-    synthesize_cell_conditions, CellKind,
+    cell_condition, decompose_univariate, evaluate_formula_at_exact_lifted_cell,
+    lift_over_rational_sample, lift_two_variables, synthesize_cell_conditions, CellKind,
 };
 use quantifier_elimination::Polynomial;
 use quantifier_elimination::{Formula, Relation};
@@ -27,6 +27,24 @@ fn returns_a_single_sector_without_roots() {
     let cells = decompose_univariate(&[UnivariatePolynomial::from_integers(&[1, 0, 1])]);
     assert_eq!(cells.len(), 1);
     assert!(matches!(cells[0].kind, CellKind::Sector));
+}
+
+#[test]
+fn evaluates_formulas_at_algebraic_lifted_samples() {
+    let base_cells = decompose_univariate(&[UnivariatePolynomial::from_integers(&[-2, 0, 1])]);
+    let lifted_cells = decompose_univariate(&[UnivariatePolynomial::from_integers(&[1, 0, 1])]);
+    // At (sqrt(2), 0), the polynomial x0^2 + x1 equals 2.
+    assert!(evaluate_formula_at_exact_lifted_cell(
+        &Formula::atom(
+            Polynomial::variable(0).pow(2) + Polynomial::variable(1) - Polynomial::integer(2),
+            Relation::Equal,
+        ),
+        0,
+        1,
+        &base_cells[3],
+        &lifted_cells[0],
+    )
+    .unwrap());
 }
 
 #[test]

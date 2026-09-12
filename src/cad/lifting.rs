@@ -5,7 +5,7 @@ use crate::cad::projection::{
 };
 use crate::formula::Formula;
 use crate::formula::Relation;
-use crate::polynomial::{Polynomial, Variable};
+use crate::polynomial::{Polynomial, PolynomialEvaluationError, Variable};
 use num_bigint::BigInt;
 use num_rational::BigRational;
 use num_traits::{Signed, Zero};
@@ -28,6 +28,7 @@ pub struct UnivariateCell {
 pub enum FormulaEvaluationError {
     NonUnivariatePolynomial,
     QuantifierNotSupported,
+    PolynomialEvaluation(PolynomialEvaluationError),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -324,6 +325,59 @@ pub fn evaluate_formula_at_lifted_cell(
         }),
         Formula::Quantified { .. } => Err(FormulaEvaluationError::QuantifierNotSupported),
     }
+}
+
+pub fn evaluate_formula_at_exact_lifted_cell(
+    formula: &Formula,
+    base_variable: Variable,
+    lifted_variable: Variable,
+    base_cell: &UnivariateCell,
+    lifted_cell: &UnivariateCell,
+) -> Result<bool, FormulaEvaluationError> {
+    let mut values = std::collections::BTreeMap::new();
+    values.insert(base_variable, exact_value(base_cell));
+    values.insert(lifted_variable, exact_value(lifted_cell));
+    evaluate_formula_at_exact_values(formula, &values)
+}
+
+fn evaluate_formula_at_exact_values(
+    formula: &Formula,
+    values: &std::collections::BTreeMap<Variable, crate::algebra::coefficient::ExactReal>,
+) -> Result<bool, FormulaEvaluationError> {
+    match formula {
+        Formula::True => Ok(true),
+        Formula::False => Ok(false),
+        Formula::Atom(atom) => {
+            let value = atom
+                .polynomial
+                .evaluate_exact(values)
+                .map_err(FormulaEvaluationError::PolynomialEvaluation)?;
+            let sign = value.sign();
+            Ok(match atom.relation {
+                Relation::Equal => sign == std::cmp::Ordering::Equal,
+                Relation::NotEqual => sign != std::cmp::Ordering::Equal,
+                Relation::Less => sign == std::cmp::Ordering::Less,
+                Relation::LessOrEqual => sign != std::cmp::Ordering::Greater,
+                Relation::Greater => sign == std::cmp::Ordering::Greater,
+                Relation::GreaterOrEqual => sign != std::cmp::Ordering::Less,
+            })
+        }
+        Formula::Not(body) => Ok(!evaluate_formula_at_exact_values(body, values)?),
+        Formula::And(formulas) => formulas.iter().try_fold(true, |result, formula| {
+            Ok(result && evaluate_formula_at_exact_values(formula, values)?)
+        }),
+        Formula::Or(formulas) => formulas.iter().try_fold(false, |result, formula| {
+            Ok(result || evaluate_formula_at_exact_values(formula, values)?)
+        }),
+        Formula::Quantified { .. } => Err(FormulaEvaluationError::QuantifierNotSupported),
+    }
+}
+
+fn exact_value(cell: &UnivariateCell) -> crate::algebra::coefficient::ExactReal {
+    cell.exact_sample
+        .clone()
+        .map(crate::algebra::coefficient::ExactReal::algebraic)
+        .unwrap_or_else(|| crate::algebra::coefficient::ExactReal::rational(cell.sample.clone()))
 }
 
 pub fn cell_condition(
