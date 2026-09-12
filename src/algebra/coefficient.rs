@@ -23,6 +23,10 @@ impl ExactReal {
         Self::Algebraic(value)
     }
 
+    pub fn is_zero(&self) -> bool {
+        self.sign() == Ordering::Equal
+    }
+
     pub fn sign(&self) -> Ordering {
         match self {
             Self::Rational(value) => value.cmp(&BigRational::zero()),
@@ -57,6 +61,13 @@ impl ExactReal {
             _ => Err(ExactRealError::AlgebraicArithmeticNotImplemented),
         }
     }
+
+    pub fn negated(&self) -> Self {
+        match self {
+            Self::Rational(value) => Self::Rational(-value),
+            Self::Algebraic(value) => Self::Algebraic(value.negated()),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -65,7 +76,10 @@ pub struct AlgebraicPolynomial {
 }
 
 impl AlgebraicPolynomial {
-    pub fn new(coefficients: Vec<ExactReal>) -> Self {
+    pub fn new(mut coefficients: Vec<ExactReal>) -> Self {
+        while coefficients.last().is_some_and(ExactReal::is_zero) {
+            coefficients.pop();
+        }
         Self { coefficients }
     }
 

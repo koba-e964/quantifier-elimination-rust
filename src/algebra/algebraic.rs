@@ -26,6 +26,23 @@ impl AlgebraicReal {
         }
     }
 
+    pub fn negated(&self) -> Self {
+        let coefficients = (0..=self.polynomial.degree().unwrap_or(0))
+            .map(|degree| {
+                let coefficient = self.polynomial.coefficient(degree);
+                if degree % 2 == 0 {
+                    coefficient
+                } else {
+                    -coefficient
+                }
+            })
+            .collect();
+        Self::new(
+            UnivariatePolynomial::new(coefficients),
+            RootInterval::new(-self.interval.upper.clone(), -self.interval.lower.clone()),
+        )
+    }
+
     pub fn rational_value(&self) -> Option<num_rational::BigRational> {
         let midpoint = (&self.interval.lower + &self.interval.upper) / num_bigint::BigInt::from(2);
         (self.polynomial.evaluate(&midpoint).is_zero()).then_some(midpoint)

@@ -56,3 +56,43 @@ fn reports_unimplemented_algebraic_binary_arithmetic() {
         Err(ExactRealError::AlgebraicArithmeticNotImplemented)
     );
 }
+
+#[test]
+fn negates_rational_and_algebraic_values_exactly() {
+    let rational = ExactReal::rational(BigRational::from_integer(2.into()));
+    assert_eq!(
+        rational.negated(),
+        ExactReal::rational(BigRational::from_integer((-2).into()))
+    );
+
+    let root = quantifier_elimination::AlgebraicReal::new(
+        quantifier_elimination::UnivariatePolynomial::from_integers(&[-2, 0, 1]),
+        quantifier_elimination::RootInterval::new(
+            BigRational::from_integer(1.into()),
+            BigRational::from_integer(2.into()),
+        ),
+    );
+    let negated = root.negated();
+    assert_eq!(negated.polynomial, root.polynomial);
+    assert_eq!(
+        negated.interval.lower,
+        BigRational::from_integer((-2).into())
+    );
+    assert_eq!(
+        negated.interval.upper,
+        BigRational::from_integer((-1).into())
+    );
+    assert_eq!(ExactReal::algebraic(negated).sign(), Ordering::Less);
+}
+
+#[test]
+fn normalizes_trailing_zero_coefficients() {
+    let polynomial = AlgebraicPolynomial::new(vec![
+        ExactReal::rational(BigRational::from_integer(1.into())),
+        ExactReal::rational(BigRational::zero()),
+        ExactReal::rational(BigRational::zero()),
+    ]);
+
+    assert_eq!(polynomial.degree(), Some(0));
+    assert_eq!(polynomial.coefficients().len(), 1);
+}
