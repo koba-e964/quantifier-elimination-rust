@@ -190,6 +190,24 @@ fn dispatches_supported_elimination_paths() {
 }
 
 #[test]
+fn eliminates_boolean_combinations_and_strict_inequalities() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let body = Formula::And(vec![
+        Formula::atom(y.clone() * y.clone() - x, Relation::Equal),
+        Formula::atom(y, Relation::Greater),
+    ]);
+    let formula = Formula::exists(1, body);
+    let eliminated = eliminate(&formula).unwrap();
+
+    for (value, expected) in [(-1, false), (0, false), (4, true)] {
+        let mut assignment = BTreeMap::new();
+        assignment.insert(0, BigRational::from_integer(value.into()));
+        assert_eq!(eliminated.evaluate(&assignment), Some(expected));
+    }
+}
+
+#[test]
 fn reports_unsupported_elimination_shapes() {
     let x = Polynomial::variable(0);
     let z = Polynomial::variable(2);
