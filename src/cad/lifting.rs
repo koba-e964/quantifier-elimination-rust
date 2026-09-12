@@ -35,7 +35,9 @@ pub struct TwoDimensionalLifting {
     pub projection_stack: ProjectionStack,
     pub base_polynomials: Vec<UnivariatePolynomial>,
     pub base_cells: Vec<UnivariateCell>,
+    pub base_signs: Vec<Vec<i8>>,
     pub lifted_cells: Vec<Vec<UnivariateCell>>,
+    pub lifted_signs: Vec<Vec<Vec<i8>>>,
 }
 
 impl UnivariateCell {
@@ -181,20 +183,45 @@ pub fn lift_two_variables(
         })
         .collect::<Vec<_>>();
     let base_cells = decompose_univariate(&base_polynomials);
-    let original = formula_polynomials(formula);
-    let lifted_cells = base_cells
+    let base_signs = base_cells
         .iter()
         .map(|cell| {
-            let mut values = std::collections::BTreeMap::new();
-            values.insert(variable_order[0], cell.sample.clone());
-            lift_over_rational_sample(&original, variable_order[1], &values)
+            base_polynomials
+                .iter()
+                .map(|polynomial| cell.sign_of(polynomial))
+                .collect::<Vec<_>>()
         })
-        .collect();
+        .collect::<Vec<_>>();
+    let original = formula_polynomials(formula);
+    let mut lifted_cells = Vec::new();
+    let mut lifted_signs = Vec::new();
+    for cell in &base_cells {
+        let mut values = std::collections::BTreeMap::new();
+        values.insert(variable_order[0], cell.sample.clone());
+        let specialized = original
+            .iter()
+            .map(|polynomial| specialize_to_univariate(polynomial, variable_order[1], &values))
+            .collect::<Vec<_>>();
+        let cells = decompose_univariate(&specialized);
+        let signs = cells
+            .iter()
+            .map(|lifted| {
+                specialized
+                    .iter()
+                    .map(|polynomial| lifted.sign_of(polynomial))
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
+        lifted_cells.push(cells);
+        lifted_signs.push(signs);
+    }
     Ok(TwoDimensionalLifting {
         projection_stack: stack,
         base_polynomials,
         base_cells,
+        base_signs,
         lifted_cells,
+        lifted_signs,
     })
 }
 
