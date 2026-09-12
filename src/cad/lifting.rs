@@ -1,9 +1,10 @@
 use crate::algebra::algebraic::AlgebraicReal;
 use crate::algebra::univariate::{RootInterval, UnivariatePolynomial};
+use crate::formula::Relation;
 use crate::polynomial::{Polynomial, Variable};
 use num_bigint::BigInt;
 use num_rational::BigRational;
-use num_traits::Zero;
+use num_traits::{Signed, Zero};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum CellKind {
@@ -35,6 +36,32 @@ impl UnivariateCell {
             kind: CellKind::Section,
             exact_sample: Some(AlgebraicReal::new(polynomial, root.clone())),
             root: Some(root),
+        }
+    }
+
+    pub fn sign_of(&self, polynomial: &UnivariatePolynomial) -> i8 {
+        if let Some(algebraic) = &self.exact_sample {
+            algebraic.sign_of(polynomial)
+        } else {
+            let value = polynomial.evaluate(&self.sample);
+            if value.is_zero() {
+                0
+            } else if value.is_positive() {
+                1
+            } else {
+                -1
+            }
+        }
+    }
+
+    pub fn satisfies(&self, polynomial: &UnivariatePolynomial, relation: Relation) -> bool {
+        match relation {
+            Relation::Equal => self.sign_of(polynomial) == 0,
+            Relation::NotEqual => self.sign_of(polynomial) != 0,
+            Relation::Less => self.sign_of(polynomial) < 0,
+            Relation::LessOrEqual => self.sign_of(polynomial) <= 0,
+            Relation::Greater => self.sign_of(polynomial) > 0,
+            Relation::GreaterOrEqual => self.sign_of(polynomial) >= 0,
         }
     }
 }

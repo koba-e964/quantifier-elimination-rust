@@ -5,6 +5,7 @@ use quantifier_elimination::cad::lifting::{
     decompose_univariate, lift_over_rational_sample, CellKind,
 };
 use quantifier_elimination::Polynomial;
+use quantifier_elimination::Relation;
 use std::collections::BTreeMap;
 
 #[test]
@@ -83,4 +84,20 @@ fn specializes_lower_variables_before_lifting() {
     assert!(cells[4].root.is_none());
     assert!(cells[4].sample > BigRational::zero());
     assert!(cells.windows(2).all(|pair| pair[0].sample < pair[1].sample));
+}
+
+#[test]
+fn evaluates_signs_and_relations_on_each_cell() {
+    let polynomial = UnivariatePolynomial::from_integers(&[-2, 0, 1]);
+    let cells = decompose_univariate(std::slice::from_ref(&polynomial));
+    let signs = cells
+        .iter()
+        .map(|cell| cell.sign_of(&polynomial))
+        .collect::<Vec<_>>();
+
+    assert_eq!(signs, vec![1, 0, -1, 0, 1]);
+    assert!(cells[1].satisfies(&polynomial, Relation::Equal));
+    assert!(cells[2].satisfies(&polynomial, Relation::Less));
+    assert!(cells[0].satisfies(&polynomial, Relation::Greater));
+    assert!(!cells[3].satisfies(&polynomial, Relation::NotEqual));
 }
