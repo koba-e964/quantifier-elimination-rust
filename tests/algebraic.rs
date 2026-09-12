@@ -132,3 +132,25 @@ fn performs_exact_mixed_rational_algebraic_arithmetic() {
     // sqrt(2) > 1.
     assert_eq!(root.compare(&one), Ordering::Greater);
 }
+
+#[test]
+fn performs_exact_algebraic_algebraic_arithmetic() {
+    let root = ExactReal::algebraic(quantifier_elimination::AlgebraicReal::new(
+        quantifier_elimination::UnivariatePolynomial::from_integers(&[-2, 0, 1]),
+        quantifier_elimination::RootInterval::new(
+            BigRational::from_integer(1.into()),
+            BigRational::from_integer(2.into()),
+        ),
+    ));
+    let two = ExactReal::rational(BigRational::from_integer(2.into()));
+
+    // sqrt(2) + sqrt(2) = 2 * sqrt(2) > 2.
+    assert_eq!(
+        root.try_add(&root).unwrap().compare(&two),
+        Ordering::Greater
+    );
+    // sqrt(2) - sqrt(2) = 0.
+    assert_eq!(root.try_sub(&root).unwrap().sign(), Ordering::Equal);
+    // sqrt(2) * sqrt(2) = 2.
+    assert_eq!(root.try_mul(&root).unwrap().compare(&two), Ordering::Equal);
+}

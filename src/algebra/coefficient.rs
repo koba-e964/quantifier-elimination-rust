@@ -50,7 +50,10 @@ impl ExactReal {
             (Self::Rational(left), Self::Algebraic(right)) => {
                 Ok(Self::Algebraic(right.add_rational(left)))
             }
-            _ => Err(ExactRealError::AlgebraicArithmeticNotImplemented),
+            (Self::Algebraic(left), Self::Algebraic(right)) => left
+                .add_algebraic(right)
+                .map(Self::Algebraic)
+                .ok_or(ExactRealError::AlgebraicArithmeticNotImplemented),
         }
     }
 
@@ -63,7 +66,13 @@ impl ExactReal {
             (Self::Rational(left), Self::Algebraic(right)) => {
                 Ok(Self::Algebraic(right.negated().add_rational(left)))
             }
-            _ => Err(ExactRealError::AlgebraicArithmeticNotImplemented),
+            (Self::Algebraic(left), Self::Algebraic(right)) if left == right => {
+                Ok(Self::Rational(BigRational::zero()))
+            }
+            (Self::Algebraic(left), Self::Algebraic(right)) => left
+                .add_algebraic(&right.negated())
+                .map(Self::Algebraic)
+                .ok_or(ExactRealError::AlgebraicArithmeticNotImplemented),
         }
     }
 
@@ -78,7 +87,10 @@ impl ExactReal {
                 Some(value) => Ok(Self::Algebraic(value)),
                 None => Ok(Self::Rational(BigRational::zero())),
             },
-            _ => Err(ExactRealError::AlgebraicArithmeticNotImplemented),
+            (Self::Algebraic(left), Self::Algebraic(right)) => left
+                .mul_algebraic(right)
+                .map(Self::Algebraic)
+                .ok_or(ExactRealError::AlgebraicArithmeticNotImplemented),
         }
     }
 
