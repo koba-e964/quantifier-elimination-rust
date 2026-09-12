@@ -128,3 +128,17 @@ fn eliminates_one_variable_and_preserves_the_free_variable() {
         .collect::<Vec<_>>();
     assert_eq!(values, vec![false, true, true]);
 }
+
+#[test]
+fn eliminates_a_universal_variable() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let body = Formula::atom(y.clone() * y + x.clone() * x, Relation::GreaterOrEqual);
+    let formula = Formula::forall(1, body);
+    let eliminated = eliminate_one_variable(&formula, 0, 1).unwrap();
+
+    let cells = decompose_univariate(&[UnivariatePolynomial::from_integers(&[0, 0, 1])]);
+    assert!(cells
+        .iter()
+        .all(|cell| cell.evaluate_formula(&eliminated).unwrap()));
+}
