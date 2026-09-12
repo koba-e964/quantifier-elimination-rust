@@ -2,7 +2,7 @@ use num_rational::BigRational;
 use num_traits::Zero;
 use quantifier_elimination::algebra::univariate::UnivariatePolynomial;
 use quantifier_elimination::cad::lifting::{
-    decompose_univariate, lift_over_rational_sample, lift_two_variables, CellKind,
+    cell_condition, decompose_univariate, lift_over_rational_sample, lift_two_variables, CellKind,
 };
 use quantifier_elimination::Polynomial;
 use quantifier_elimination::{Formula, Relation};
@@ -149,4 +149,11 @@ fn builds_a_two_variable_lifting_layer() {
     assert!(truth_table[0].iter().any(|value| *value));
     assert!(truth_table[1].iter().any(|value| *value));
     assert!(truth_table[2].iter().all(|value| !value));
+
+    let conditions = lifting
+        .base_cells
+        .iter()
+        .map(|cell| cell_condition(cell, &lifting.base_polynomials, 1))
+        .collect::<Vec<_>>();
+    assert_eq!(conditions.len(), lifting.base_cells.len());
 }

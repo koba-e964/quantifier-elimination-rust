@@ -271,6 +271,25 @@ pub fn evaluate_formula_at_lifted_cell(
     }
 }
 
+pub fn cell_condition(
+    cell: &UnivariateCell,
+    polynomials: &[UnivariatePolynomial],
+    variable: Variable,
+) -> Formula {
+    let atoms = polynomials
+        .iter()
+        .map(|polynomial| {
+            let relation = match cell.sign_of(polynomial) {
+                value if value < 0 => Relation::Less,
+                0 => Relation::Equal,
+                _ => Relation::Greater,
+            };
+            Formula::atom(Polynomial::from_univariate(variable, polynomial), relation)
+        })
+        .collect();
+    Formula::And(atoms)
+}
+
 fn specialize_to_univariate(
     polynomial: &Polynomial,
     variable: Variable,

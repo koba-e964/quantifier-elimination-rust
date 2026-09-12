@@ -102,6 +102,25 @@ impl Polynomial {
         Self { terms }
     }
 
+    pub fn from_univariate(
+        variable: Variable,
+        polynomial: &crate::algebra::univariate::UnivariatePolynomial,
+    ) -> Self {
+        let mut result = Self::zero();
+        for degree in 0..=polynomial.degree().unwrap_or(0) {
+            let coefficient = polynomial.coefficient(degree);
+            if coefficient.is_zero() {
+                continue;
+            }
+            let mut powers = BTreeMap::new();
+            if degree > 0 {
+                powers.insert(variable, degree);
+            }
+            result.terms.insert(Monomial(powers), coefficient);
+        }
+        result
+    }
+
     pub fn terms(&self) -> impl Iterator<Item = (&Monomial, &BigRational)> {
         self.terms.iter()
     }
