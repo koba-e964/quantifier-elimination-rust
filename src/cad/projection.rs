@@ -1,5 +1,6 @@
 use crate::formula::Formula;
 use crate::polynomial::{Polynomial, Variable};
+use std::collections::BTreeSet;
 
 /// Construct a Collins-style projection set for one variable.
 ///
@@ -35,19 +36,51 @@ pub struct ProjectionStack {
     pub levels: Vec<Vec<Polynomial>>,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ProjectionError {
+    DuplicateVariable(Variable),
+    MissingVariable(Variable),
+}
+
 /// Build projection sets from the input atoms, eliminating variables from
 /// highest to lowest according to `variable_order`.
-pub fn build_projection_stack(formula: &Formula, variable_order: &[Variable]) -> ProjectionStack {
-    let mut current = formula_polynomials(formula);
+pub fn build_projection_stack(
+    formula: &Formula,
+    variable_order: &[Variable],
+) -> Result<ProjectionStack, ProjectionError> {
+    let polynomials = formula_polynomials(formula);
+    let required = polynomials
+        .iter()
+        .flat_map(Polynomial::variables)
+        .collect::<BTreeSet<_>>();
+    let provided = variable_order.iter().copied().collect::<BTreeSet<_>>();
+    if provided.len() != variable_order.len() {
+        let duplicate = variable_order
+            .iter()
+            .find(|variable| {
+                variable_order
+                    .iter()
+                    .filter(|other| other == variable)
+                    .count()
+                    > 1
+            })
+            .copied()
+            .unwrap();
+        return Err(ProjectionError::DuplicateVariable(duplicate));
+    }
+    if let Some(missing) = required.difference(&provided).next() {
+        return Err(ProjectionError::MissingVariable(*missing));
+    }
+    let mut current = polynomials;
     let mut levels = vec![current.clone()];
     for variable in variable_order.iter().rev().copied() {
         current = project(&current, variable);
         levels.push(current.clone());
     }
-    ProjectionStack {
+    Ok(ProjectionStack {
         variable_order: variable_order.to_vec(),
         levels,
-    }
+    })
 }
 
 fn formula_polynomials(formula: &Formula) -> Vec<Polynomial> {

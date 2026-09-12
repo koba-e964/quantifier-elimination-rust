@@ -1,4 +1,6 @@
-use quantifier_elimination::cad::projection::{build_projection_stack, project, resultant};
+use quantifier_elimination::cad::projection::{
+    build_projection_stack, project, resultant, ProjectionError,
+};
 use quantifier_elimination::{Formula, Polynomial, Relation};
 
 #[test]
@@ -40,7 +42,7 @@ fn builds_projection_levels_in_variable_order() {
     let x = Polynomial::variable(0);
     let y = Polynomial::variable(1);
     let formula = Formula::exists(0, Formula::atom(x.clone() * x + y, Relation::Equal));
-    let stack = build_projection_stack(&formula, &[1, 0]);
+    let stack = build_projection_stack(&formula, &[1, 0]).unwrap();
 
     assert_eq!(stack.variable_order, vec![1, 0]);
     assert_eq!(stack.levels.len(), 3);
@@ -50,4 +52,19 @@ fn builds_projection_levels_in_variable_order() {
     assert!(stack.levels[2]
         .iter()
         .all(|polynomial| polynomial.variables().next().is_none()));
+}
+
+#[test]
+fn rejects_invalid_variable_orders() {
+    let x = Polynomial::variable(0);
+    let formula = Formula::atom(x, Relation::Equal);
+
+    assert_eq!(
+        build_projection_stack(&formula, &[]),
+        Err(ProjectionError::MissingVariable(0))
+    );
+    assert_eq!(
+        build_projection_stack(&formula, &[0, 0]),
+        Err(ProjectionError::DuplicateVariable(0))
+    );
 }
