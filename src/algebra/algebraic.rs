@@ -43,6 +43,54 @@ impl AlgebraicReal {
         )
     }
 
+    pub fn add_rational(&self, value: &num_rational::BigRational) -> Self {
+        let transformed = affine_transform(
+            &self.polynomial,
+            value,
+            &num_rational::BigRational::from_integer(1.into()),
+        );
+        Self::new(
+            transformed,
+            RootInterval::new(&self.interval.lower + value, &self.interval.upper + value),
+        )
+    }
+
+    pub fn mul_rational(&self, value: &num_rational::BigRational) -> Option<Self> {
+        if value.is_zero() {
+            return None;
+        }
+        let transformed = affine_transform(
+            &self.polynomial,
+            &num_rational::BigRational::zero(),
+            &(num_rational::BigRational::from_integer(1.into()) / value),
+        );
+        let lower = &self.interval.lower * value;
+        let upper = &self.interval.upper * value;
+        Some(Self::new(
+            transformed,
+            RootInterval::new(lower.clone().min(upper.clone()), lower.max(upper)),
+        ))
+    }
+
+    pub fn compare_rational(&self, value: &num_rational::BigRational) -> Ordering {
+        let polynomial = UnivariatePolynomial::new(vec![
+            -value.clone(),
+            num_rational::BigRational::from_integer(1.into()),
+        ]);
+        match self.sign_of(&polynomial) {
+            sign if sign < 0 => Ordering::Less,
+            0 => Ordering::Equal,
+            _ => Ordering::Greater,
+        }
+    }
+
+    pub fn is_zero(&self) -> bool {
+        self.sign_of(&UnivariatePolynomial::new(vec![
+            num_rational::BigRational::zero(),
+            num_rational::BigRational::from_integer(1.into()),
+        ])) == 0
+    }
+
     pub fn rational_value(&self) -> Option<num_rational::BigRational> {
         let midpoint = (&self.interval.lower + &self.interval.upper) / num_bigint::BigInt::from(2);
         (self.polynomial.evaluate(&midpoint).is_zero()).then_some(midpoint)
@@ -101,4 +149,32 @@ impl AlgebraicReal {
             right = right.refine(&width);
         }
     }
+}
+
+fn affine_transform(
+    polynomial: &UnivariatePolynomial,
+    shift: &num_rational::BigRational,
+    scale: &num_rational::BigRational,
+) -> UnivariatePolynomial {
+    let mut result = UnivariatePolynomial::zero();
+    for degree in (0..=polynomial.degree().unwrap_or(0)).rev() {
+        let transformed = UnivariatePolynomial::new(vec![-shift.clone(), scale.clone()]);
+        result = multiply(&result, &transformed)
+            + UnivariatePolynomial::constant(polynomial.coefficient(degree));
+    }
+    result
+}
+
+fn multiply(left: &UnivariatePolynomial, right: &UnivariatePolynomial) -> UnivariatePolynomial {
+    let mut coefficients = vec![
+        num_rational::BigRational::zero();
+        left.degree().unwrap_or(0) + right.degree().unwrap_or(0) + 1
+    ];
+    for left_degree in 0..=left.degree().unwrap_or(0) {
+        for right_degree in 0..=right.degree().unwrap_or(0) {
+            coefficients[left_degree + right_degree] +=
+                left.coefficient(left_degree) * right.coefficient(right_degree);
+        }
+    }
+    UnivariatePolynomial::new(coefficients)
 }

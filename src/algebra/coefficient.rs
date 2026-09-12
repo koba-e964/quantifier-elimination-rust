@@ -44,6 +44,12 @@ impl ExactReal {
     pub fn try_add(&self, other: &Self) -> Result<Self, ExactRealError> {
         match (self, other) {
             (Self::Rational(left), Self::Rational(right)) => Ok(Self::Rational(left + right)),
+            (Self::Algebraic(left), Self::Rational(right)) => {
+                Ok(Self::Algebraic(left.add_rational(right)))
+            }
+            (Self::Rational(left), Self::Algebraic(right)) => {
+                Ok(Self::Algebraic(right.add_rational(left)))
+            }
             _ => Err(ExactRealError::AlgebraicArithmeticNotImplemented),
         }
     }
@@ -51,6 +57,12 @@ impl ExactReal {
     pub fn try_sub(&self, other: &Self) -> Result<Self, ExactRealError> {
         match (self, other) {
             (Self::Rational(left), Self::Rational(right)) => Ok(Self::Rational(left - right)),
+            (Self::Algebraic(left), Self::Rational(right)) => {
+                Ok(Self::Algebraic(left.add_rational(&-right)))
+            }
+            (Self::Rational(left), Self::Algebraic(right)) => {
+                Ok(Self::Algebraic(right.negated().add_rational(left)))
+            }
             _ => Err(ExactRealError::AlgebraicArithmeticNotImplemented),
         }
     }
@@ -58,6 +70,14 @@ impl ExactReal {
     pub fn try_mul(&self, other: &Self) -> Result<Self, ExactRealError> {
         match (self, other) {
             (Self::Rational(left), Self::Rational(right)) => Ok(Self::Rational(left * right)),
+            (Self::Algebraic(left), Self::Rational(right)) => match left.mul_rational(right) {
+                Some(value) => Ok(Self::Algebraic(value)),
+                None => Ok(Self::Rational(BigRational::zero())),
+            },
+            (Self::Rational(left), Self::Algebraic(right)) => match right.mul_rational(left) {
+                Some(value) => Ok(Self::Algebraic(value)),
+                None => Ok(Self::Rational(BigRational::zero())),
+            },
             _ => Err(ExactRealError::AlgebraicArithmeticNotImplemented),
         }
     }
@@ -66,6 +86,17 @@ impl ExactReal {
         match self {
             Self::Rational(value) => Self::Rational(-value),
             Self::Algebraic(value) => Self::Algebraic(value.negated()),
+        }
+    }
+
+    pub fn compare(&self, other: &Self) -> Ordering {
+        match (self, other) {
+            (Self::Rational(left), Self::Rational(right)) => left.cmp(right),
+            (Self::Algebraic(left), Self::Rational(right)) => left.compare_rational(right),
+            (Self::Rational(left), Self::Algebraic(right)) => {
+                right.compare_rational(left).reverse()
+            }
+            (Self::Algebraic(left), Self::Algebraic(right)) => left.compare(right),
         }
     }
 }
