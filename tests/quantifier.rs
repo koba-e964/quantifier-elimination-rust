@@ -1,7 +1,7 @@
 use quantifier_elimination::qe::evaluate::{decide_univariate, eliminate_univariate};
 use quantifier_elimination::qe::normalize::to_nnf;
 use quantifier_elimination::qe::simplify::simplify;
-use quantifier_elimination::{Formula, Polynomial, Relation};
+use quantifier_elimination::{Formula, Polynomial, Relation, RenameError};
 
 #[test]
 fn decides_existential_polynomial_formulas() {
@@ -89,4 +89,18 @@ fn tracks_free_variables_across_quantifier_scopes() {
         formula.free_variables().into_iter().collect::<Vec<_>>(),
         vec![1]
     );
+}
+
+#[test]
+fn alpha_renames_without_capturing_free_variables() {
+    let x = Polynomial::variable(0);
+    let formula = Formula::exists(0, Formula::atom(x, Relation::Equal));
+    let renamed = formula.alpha_rename(0, 2).unwrap();
+
+    assert_eq!(renamed.free_variables().len(), 0);
+    assert!(matches!(renamed, Formula::Quantified { variable: 2, .. }));
+
+    let y = Polynomial::variable(1);
+    let capturing = Formula::exists(0, Formula::atom(y, Relation::Equal));
+    assert_eq!(capturing.alpha_rename(0, 1), Err(RenameError::WouldCapture));
 }

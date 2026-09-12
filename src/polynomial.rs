@@ -170,6 +170,20 @@ impl Polynomial {
         (0..exponent).fold(Self::one(), |result, _| result * self.clone())
     }
 
+    pub fn rename_variable(&self, old: Variable, new: Variable) -> Self {
+        let mut result = Self::zero();
+        for (monomial, coefficient) in &self.terms {
+            let mut powers = monomial.0.clone();
+            if let Some(exponent) = powers.remove(&old) {
+                *powers.entry(new).or_default() += exponent;
+            }
+            let entry = result.terms.entry(Monomial(powers)).or_default();
+            *entry += coefficient.clone();
+        }
+        result.terms.retain(|_, coefficient| !coefficient.is_zero());
+        result
+    }
+
     pub fn to_string_with(&self, names: &VariableNames) -> String {
         self.format_with(names)
     }
