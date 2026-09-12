@@ -90,6 +90,17 @@ impl Formula {
         }
     }
 
+    pub fn is_quantifier_free(&self) -> bool {
+        match self {
+            Self::True | Self::False | Self::Atom(_) => true,
+            Self::Not(body) => body.is_quantifier_free(),
+            Self::And(formulas) | Self::Or(formulas) => {
+                formulas.iter().all(Self::is_quantifier_free)
+            }
+            Self::Quantified { .. } => false,
+        }
+    }
+
     /// Alpha-rename the outermost binder for `variable`, rejecting capture.
     pub fn alpha_rename(&self, variable: usize, replacement: usize) -> Result<Self, RenameError> {
         let Self::Quantified {

@@ -121,6 +121,7 @@ fn eliminates_one_variable_and_preserves_the_free_variable() {
         eliminated.free_variables().into_iter().collect::<Vec<_>>(),
         vec![0]
     );
+    assert!(eliminated.is_quantifier_free());
     let cells = decompose_univariate(&[UnivariatePolynomial::from_integers(&[0, 1])]);
     let values = cells
         .iter()
