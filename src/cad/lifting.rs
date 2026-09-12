@@ -1,4 +1,5 @@
 use crate::algebra::univariate::{RootInterval, UnivariatePolynomial};
+use crate::polynomial::{Polynomial, Variable};
 use num_bigint::BigInt;
 use num_rational::BigRational;
 use num_traits::Zero;
@@ -65,4 +66,41 @@ pub fn decompose_univariate(polynomials: &[UnivariatePolynomial]) -> Vec<Univari
         }
     }
     cells
+}
+
+/// Specialize all variables other than `variable` at a rational sample point
+/// and lift the resulting univariate family into cells.
+pub fn lift_over_rational_sample(
+    polynomials: &[Polynomial],
+    variable: Variable,
+    values: &std::collections::BTreeMap<Variable, BigRational>,
+) -> Vec<UnivariateCell> {
+    let specialized = polynomials
+        .iter()
+        .map(|polynomial| specialize_to_univariate(polynomial, variable, values))
+        .collect::<Vec<_>>();
+    decompose_univariate(&specialized)
+}
+
+fn specialize_to_univariate(
+    polynomial: &Polynomial,
+    variable: Variable,
+    values: &std::collections::BTreeMap<Variable, BigRational>,
+) -> UnivariatePolynomial {
+    let mut coefficients = vec![BigRational::zero(); polynomial.degree(variable) + 1];
+    for (monomial, coefficient) in polynomial.terms() {
+        let mut value = coefficient.clone();
+        for other_variable in monomial.variables() {
+            if other_variable == variable {
+                continue;
+            }
+            value *= values
+                .get(&other_variable)
+                .cloned()
+                .unwrap_or_default()
+                .pow(monomial.exponent(other_variable) as i32);
+        }
+        coefficients[monomial.exponent(variable)] += value;
+    }
+    UnivariatePolynomial::new(coefficients)
 }
