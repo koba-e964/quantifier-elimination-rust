@@ -5,7 +5,7 @@ use quantifier_elimination::cad::lifting::{
     decompose_univariate, lift_over_rational_sample, CellKind,
 };
 use quantifier_elimination::Polynomial;
-use quantifier_elimination::Relation;
+use quantifier_elimination::{Formula, Relation};
 use std::collections::BTreeMap;
 
 #[test]
@@ -100,4 +100,21 @@ fn evaluates_signs_and_relations_on_each_cell() {
     assert!(cells[2].satisfies(&polynomial, Relation::Less));
     assert!(cells[0].satisfies(&polynomial, Relation::Greater));
     assert!(!cells[3].satisfies(&polynomial, Relation::NotEqual));
+}
+
+#[test]
+fn evaluates_boolean_formulas_on_cells() {
+    let x = Polynomial::variable(0);
+    let square_minus_two = x.clone() * x.clone() + Polynomial::integer(-2);
+    let formula = Formula::And(vec![
+        Formula::atom(square_minus_two, Relation::LessOrEqual),
+        Formula::atom(x, Relation::NotEqual),
+    ]);
+    let cells = decompose_univariate(&[UnivariatePolynomial::from_integers(&[-2, 0, 1])]);
+
+    let values = cells
+        .iter()
+        .map(|cell| cell.evaluate_formula(&formula).unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(values, vec![false, true, false, true, false]);
 }

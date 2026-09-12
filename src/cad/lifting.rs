@@ -1,5 +1,6 @@
 use crate::algebra::algebraic::AlgebraicReal;
 use crate::algebra::univariate::{RootInterval, UnivariatePolynomial};
+use crate::formula::Formula;
 use crate::formula::Relation;
 use crate::polynomial::{Polynomial, Variable};
 use num_bigint::BigInt;
@@ -18,6 +19,12 @@ pub struct UnivariateCell {
     pub sample: BigRational,
     pub root: Option<RootInterval>,
     pub exact_sample: Option<AlgebraicReal>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum FormulaEvaluationError {
+    NonUnivariatePolynomial,
+    QuantifierNotSupported,
 }
 
 impl UnivariateCell {
@@ -62,6 +69,27 @@ impl UnivariateCell {
             Relation::LessOrEqual => self.sign_of(polynomial) <= 0,
             Relation::Greater => self.sign_of(polynomial) > 0,
             Relation::GreaterOrEqual => self.sign_of(polynomial) >= 0,
+        }
+    }
+
+    pub fn evaluate_formula(&self, formula: &Formula) -> Result<bool, FormulaEvaluationError> {
+        match formula {
+            Formula::True => Ok(true),
+            Formula::False => Ok(false),
+            Formula::Atom(atom) => {
+                let polynomial = to_univariate(&atom.polynomial)?;
+                Ok(self.satisfies(&polynomial, atom.relation))
+            }
+            Formula::Not(body) => Ok(!self.evaluate_formula(body)?),
+            Formula::And(formulas) => formulas
+                .iter()
+                .map(|formula| self.evaluate_formula(formula))
+                .try_fold(true, |result, value| Ok(result && value?)),
+            Formula::Or(formulas) => formulas
+                .iter()
+                .map(|formula| self.evaluate_formula(formula))
+                .try_fold(false, |result, value| Ok(result || value?)),
+            Formula::Quantified { .. } => Err(FormulaEvaluationError::QuantifierNotSupported),
         }
     }
 }
@@ -139,4 +167,19 @@ fn specialize_to_univariate(
         coefficients[monomial.exponent(variable)] += value;
     }
     UnivariatePolynomial::new(coefficients)
+}
+
+fn to_univariate(polynomial: &Polynomial) -> Result<UnivariatePolynomial, FormulaEvaluationError> {
+    if polynomial.variables().any(|other| other != 0) {
+        return Err(FormulaEvaluationError::NonUnivariatePolynomial);
+    }
+    Ok(UnivariatePolynomial::new(
+        (0..=polynomial.degree(0))
+            .map(|degree| {
+                polynomial
+                    .coefficient_in(0, degree)
+                    .coefficient(&crate::polynomial::Monomial::one())
+            })
+            .collect(),
+    ))
 }
