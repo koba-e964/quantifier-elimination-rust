@@ -112,6 +112,40 @@ fn normalizes_trailing_zero_coefficients() {
 }
 
 #[test]
+fn evaluates_and_differentiates_algebraic_coefficient_polynomials() {
+    let root = ExactReal::algebraic(quantifier_elimination::AlgebraicReal::new(
+        quantifier_elimination::UnivariatePolynomial::from_integers(&[-2, 0, 1]),
+        quantifier_elimination::RootInterval::new(
+            BigRational::from_integer(1.into()),
+            BigRational::from_integer(2.into()),
+        ),
+    ));
+    let polynomial = AlgebraicPolynomial::new(vec![
+        root.clone(),
+        ExactReal::rational(BigRational::from_integer(1.into())),
+    ]);
+
+    // The polynomial sqrt(2) + x evaluates to sqrt(2) + 1 at x = 1.
+    assert_eq!(
+        polynomial
+            .evaluate(&ExactReal::rational(BigRational::from_integer(1.into())))
+            .unwrap()
+            .compare(
+                &root
+                    .try_add(&ExactReal::rational(BigRational::from_integer(1.into())))
+                    .unwrap()
+            ),
+        Ordering::Equal
+    );
+    // The derivative of sqrt(2) + x is the constant polynomial 1.
+    assert_eq!(polynomial.derivative().unwrap().degree(), Some(0));
+    assert_eq!(
+        polynomial.derivative().unwrap().coefficient(0).sign(),
+        Ordering::Greater
+    );
+}
+
+#[test]
 fn performs_exact_mixed_rational_algebraic_arithmetic() {
     let root = ExactReal::algebraic(quantifier_elimination::AlgebraicReal::new(
         quantifier_elimination::UnivariatePolynomial::from_integers(&[-2, 0, 1]),

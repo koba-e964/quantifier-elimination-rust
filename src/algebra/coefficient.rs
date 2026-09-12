@@ -119,6 +119,12 @@ pub struct AlgebraicPolynomial {
 }
 
 impl AlgebraicPolynomial {
+    pub fn zero() -> Self {
+        Self {
+            coefficients: Vec::new(),
+        }
+    }
+
     pub fn new(mut coefficients: Vec<ExactReal>) -> Self {
         while coefficients.last().is_some_and(ExactReal::is_zero) {
             coefficients.pop();
@@ -132,5 +138,63 @@ impl AlgebraicPolynomial {
 
     pub fn degree(&self) -> Option<usize> {
         (!self.coefficients.is_empty()).then_some(self.coefficients.len() - 1)
+    }
+
+    pub fn coefficient(&self, degree: usize) -> ExactReal {
+        self.coefficients
+            .get(degree)
+            .cloned()
+            .unwrap_or_else(|| ExactReal::rational(BigRational::zero()))
+    }
+
+    pub fn derivative(&self) -> Result<Self, ExactRealError> {
+        if self.coefficients.len() < 2 {
+            return Ok(Self::zero());
+        }
+        let coefficients = self
+            .coefficients
+            .iter()
+            .enumerate()
+            .skip(1)
+            .map(|(degree, coefficient)| {
+                coefficient.try_mul(&ExactReal::rational(BigRational::from_integer(
+                    (degree as i64).into(),
+                )))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(Self::new(coefficients))
+    }
+
+    pub fn evaluate(&self, value: &ExactReal) -> Result<ExactReal, ExactRealError> {
+        self.coefficients.iter().rev().try_fold(
+            ExactReal::rational(BigRational::zero()),
+            |result, coefficient| result.try_mul(value)?.try_add(coefficient),
+        )
+    }
+
+    pub fn try_add(&self, other: &Self) -> Result<Self, ExactRealError> {
+        let length = self.coefficients.len().max(other.coefficients.len());
+        let coefficients = (0..length)
+            .map(|degree| self.coefficient(degree).try_add(&other.coefficient(degree)))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(Self::new(coefficients))
+    }
+
+    pub fn try_mul(&self, other: &Self) -> Result<Self, ExactRealError> {
+        if self.coefficients.is_empty() || other.coefficients.is_empty() {
+            return Ok(Self::zero());
+        }
+        let mut coefficients = vec![
+            ExactReal::rational(BigRational::zero());
+            self.coefficients.len() + other.coefficients.len() - 1
+        ];
+        for (left_degree, left) in self.coefficients.iter().enumerate() {
+            for (right_degree, right) in other.coefficients.iter().enumerate() {
+                let product = left.try_mul(right)?;
+                coefficients[left_degree + right_degree] =
+                    coefficients[left_degree + right_degree].try_add(&product)?;
+            }
+        }
+        Ok(Self::new(coefficients))
     }
 }
