@@ -199,6 +199,30 @@ impl UnivariatePolynomial {
         RootInterval::new(lower, upper)
     }
 
+    pub fn count_roots(&self, interval: &RootInterval) -> usize {
+        self.root_count(interval)
+    }
+
+    pub fn gcd(&self, other: &Self) -> Self {
+        let mut left = self.clone();
+        let mut right = other.clone();
+        while !right.is_zero() {
+            let remainder = left.div_rem(&right).1;
+            left = right;
+            right = remainder;
+        }
+        if let Some(leading) = left.leading_coefficient().cloned() {
+            Self::new(
+                left.coefficients
+                    .into_iter()
+                    .map(|coefficient| coefficient / &leading)
+                    .collect(),
+            )
+        } else {
+            Self::zero()
+        }
+    }
+
     fn root_bound(&self) -> BigRational {
         let leading = self.leading_coefficient().unwrap().abs();
         let max_ratio = self

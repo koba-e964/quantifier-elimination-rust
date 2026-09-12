@@ -1,6 +1,6 @@
 use num_rational::BigRational;
 use num_traits::Zero;
-use quantifier_elimination::UnivariatePolynomial;
+use quantifier_elimination::{AlgebraicReal, UnivariatePolynomial};
 
 #[test]
 fn derivative_and_division_are_exact() {
@@ -38,4 +38,28 @@ fn refines_an_isolating_interval_exactly() {
 
     assert!(refined.width() <= maximum_width);
     assert!(refined.lower < refined.upper);
+}
+
+#[test]
+fn determines_sign_at_an_algebraic_root() {
+    let defining = UnivariatePolynomial::from_integers(&[-2, 0, 1]);
+    let positive_root = defining.isolate_real_roots().remove(1);
+    let algebraic = AlgebraicReal::new(defining, positive_root);
+
+    assert_eq!(
+        algebraic.sign_of(&UnivariatePolynomial::from_integers(&[1])),
+        1
+    );
+    assert_eq!(
+        algebraic.sign_of(&UnivariatePolynomial::from_integers(&[-1])),
+        -1
+    );
+    assert_eq!(
+        algebraic.sign_of(&UnivariatePolynomial::from_integers(&[-2, 0, 1])),
+        0
+    );
+    assert_eq!(
+        algebraic.sign_of(&UnivariatePolynomial::from_integers(&[-1, 1])),
+        1
+    );
 }

@@ -1,4 +1,6 @@
 use super::univariate::{RootInterval, UnivariatePolynomial};
+use num_bigint::BigInt;
+use num_traits::Signed;
 
 /// An exact real algebraic number represented by a defining polynomial and an
 /// isolating interval containing exactly one of its real roots.
@@ -20,6 +22,25 @@ impl AlgebraicReal {
         Self {
             polynomial: self.polynomial.clone(),
             interval: self.polynomial.refine_root(&self.interval, maximum_width),
+        }
+    }
+
+    pub fn sign_of(&self, polynomial: &UnivariatePolynomial) -> i8 {
+        let common = self.polynomial.gcd(polynomial);
+        if common.count_roots(&self.interval) > 0 {
+            return 0;
+        }
+
+        let mut interval = self.interval.clone();
+        loop {
+            if polynomial.count_roots(&interval) == 0 {
+                let value =
+                    polynomial.evaluate(&((&interval.lower + &interval.upper) / BigInt::from(2)));
+                return if value.is_positive() { 1 } else { -1 };
+            }
+            interval = self
+                .polynomial
+                .refine_root(&interval, &(interval.width() / BigInt::from(2)));
         }
     }
 }
