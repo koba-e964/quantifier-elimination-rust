@@ -140,7 +140,7 @@ pub fn decompose_univariate(polynomials: &[UnivariatePolynomial]) -> Vec<Univari
         })
         .collect::<Vec<_>>();
     roots.sort_by(|left, right| left.1.lower.cmp(&right.1.lower));
-    roots.dedup_by(|left, right| left.1 == right.1);
+    separate_and_deduplicate_roots(&mut roots);
 
     if roots.is_empty() {
         return vec![UnivariateCell::sector(BigRational::zero())];
@@ -163,6 +163,44 @@ pub fn decompose_univariate(polynomials: &[UnivariatePolynomial]) -> Vec<Univari
         }
     }
     cells
+}
+
+fn separate_and_deduplicate_roots(roots: &mut Vec<(UnivariatePolynomial, RootInterval)>) {
+    let mut index = 0;
+    while index + 1 < roots.len() {
+        let overlaps = roots[index].1.upper > roots[index + 1].1.lower
+            && roots[index + 1].1.upper > roots[index].1.lower;
+        if !overlaps {
+            index += 1;
+            continue;
+        }
+
+        let intersection = RootInterval::new(
+            roots[index]
+                .1
+                .lower
+                .clone()
+                .max(roots[index + 1].1.lower.clone()),
+            roots[index]
+                .1
+                .upper
+                .clone()
+                .min(roots[index + 1].1.upper.clone()),
+        );
+        let common = roots[index].0.gcd(&roots[index + 1].0);
+        if common.count_roots(&intersection) > 0 {
+            roots.remove(index + 1);
+            continue;
+        }
+
+        let left_width = roots[index].1.width() / BigInt::from(2);
+        let right_width = roots[index + 1].1.width() / BigInt::from(2);
+        roots[index].1 = roots[index].0.refine_root(&roots[index].1, &left_width);
+        roots[index + 1].1 = roots[index + 1]
+            .0
+            .refine_root(&roots[index + 1].1, &right_width);
+        roots.sort_by(|left, right| left.1.lower.cmp(&right.1.lower));
+    }
 }
 
 /// Specialize all variables other than `variable` at a rational sample point

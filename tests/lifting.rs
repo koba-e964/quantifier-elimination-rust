@@ -30,6 +30,21 @@ fn returns_a_single_sector_without_roots() {
 }
 
 #[test]
+fn separates_distinct_roots_from_different_polynomials() {
+    let cells = decompose_univariate(&[
+        UnivariatePolynomial::from_integers(&[-2, 0, 1]),
+        UnivariatePolynomial::from_integers(&[-1, 1]),
+    ]);
+    let sections = cells
+        .iter()
+        .filter(|cell| matches!(cell.kind, CellKind::Section))
+        .collect::<Vec<_>>();
+
+    assert_eq!(sections.len(), 3);
+    assert!(cells.windows(2).all(|pair| pair[0].sample < pair[1].sample));
+}
+
+#[test]
 fn specializes_lower_variables_before_lifting() {
     let x = Polynomial::variable(0);
     let y = Polynomial::variable(1);
