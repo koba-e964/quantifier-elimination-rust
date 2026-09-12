@@ -228,7 +228,7 @@ fn handles_universal_strict_inequalities_and_disequalities() {
 }
 
 #[test]
-fn rejects_non_rational_base_sections_until_algebraic_substitution_exists() {
+fn rejects_unsupported_algebraic_coefficient_root_degrees() {
     let x = Polynomial::variable(0);
     let y = Polynomial::variable(1);
     let body = Formula::atom(
@@ -240,9 +240,25 @@ fn rejects_non_rational_base_sections_until_algebraic_substitution_exists() {
     assert_eq!(
         eliminate(&formula),
         Err(QuantifierEvaluationError::Lifting(
-            LiftingError::AlgebraicBaseSampleUnsupported,
+            LiftingError::AlgebraicCoefficientRootUnsupported,
         ))
     );
+}
+
+#[test]
+fn lifts_linear_polynomials_over_irrational_base_sections() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let body = Formula::And(vec![
+        Formula::atom(y - x.clone(), Relation::Equal),
+        Formula::atom(x.clone() * x - Polynomial::integer(2), Relation::Equal),
+    ]);
+
+    // At x = sqrt(2), the lifted equation y - x has the exact section y = sqrt(2).
+    let eliminated = eliminate(&Formula::exists(1, body)).unwrap();
+    let mut values = BTreeMap::new();
+    values.insert(0, BigRational::from_integer(2.into()));
+    assert_eq!(eliminated.evaluate(&values), Some(false));
 }
 
 #[test]

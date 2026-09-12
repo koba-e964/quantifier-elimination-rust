@@ -50,10 +50,16 @@ impl ExactReal {
             (Self::Rational(left), Self::Algebraic(right)) => {
                 Ok(Self::Algebraic(right.add_rational(left)))
             }
-            (Self::Algebraic(left), Self::Algebraic(right)) => left
-                .add_algebraic(right)
-                .map(Self::Algebraic)
-                .ok_or(ExactRealError::AlgebraicArithmeticNotImplemented),
+            (Self::Algebraic(left), Self::Algebraic(right)) => {
+                let negated = right.negated();
+                if left == &negated {
+                    Ok(Self::Rational(BigRational::zero()))
+                } else {
+                    left.add_algebraic(right)
+                        .map(Self::Algebraic)
+                        .ok_or(ExactRealError::AlgebraicArithmeticNotImplemented)
+                }
+            }
         }
     }
 
@@ -101,6 +107,16 @@ impl ExactReal {
         }
     }
 
+    pub fn try_mul_rational(&self, value: &BigRational) -> Self {
+        match self {
+            Self::Rational(left) => Self::Rational(left * value),
+            Self::Algebraic(left) => match left.mul_rational(value) {
+                Some(result) => Self::Algebraic(result),
+                None => Self::Rational(BigRational::zero()),
+            },
+        }
+    }
+
     pub fn compare(&self, other: &Self) -> Ordering {
         match (self, other) {
             (Self::Rational(left), Self::Rational(right)) => left.cmp(right),
@@ -137,7 +153,11 @@ impl AlgebraicPolynomial {
     }
 
     pub fn degree(&self) -> Option<usize> {
-        (!self.coefficients.is_empty()).then_some(self.coefficients.len() - 1)
+        if self.coefficients.is_empty() {
+            None
+        } else {
+            Some(self.coefficients.len() - 1)
+        }
     }
 
     pub fn coefficient(&self, degree: usize) -> ExactReal {
@@ -196,5 +216,27 @@ impl AlgebraicPolynomial {
             }
         }
         Ok(Self::new(coefficients))
+    }
+
+    pub fn linear_root(&self) -> Result<Option<ExactReal>, ExactRealError> {
+        if self.degree() != Some(1) {
+            return Ok(None);
+        }
+        let constant = self.coefficient(0).negated();
+        let leading = self.coefficient(1);
+        let ExactReal::Rational(leading) = leading else {
+            return Ok(None);
+        };
+        if leading.is_zero() {
+            return Ok(None);
+        }
+        Ok(Some(match constant {
+            ExactReal::Rational(value) => ExactReal::rational(value / leading),
+            ExactReal::Algebraic(value) => ExactReal::algebraic(
+                value
+                    .mul_rational(&(BigRational::from_integer(1.into()) / leading))
+                    .expect("nonzero leading coefficient"),
+            ),
+        }))
     }
 }

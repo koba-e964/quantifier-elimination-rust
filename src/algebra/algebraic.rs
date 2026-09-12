@@ -127,6 +127,9 @@ impl AlgebraicReal {
     }
 
     pub fn compare(&self, other: &Self) -> Ordering {
+        if let (Some(left), Some(right)) = (self.rational_value(), other.rational_value()) {
+            return left.cmp(&right);
+        }
         let mut left = self.clone();
         let mut right = other.clone();
         loop {

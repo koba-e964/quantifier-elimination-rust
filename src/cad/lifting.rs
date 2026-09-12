@@ -1,4 +1,5 @@
 use crate::algebra::algebraic::AlgebraicReal;
+use crate::algebra::coefficient::{AlgebraicPolynomial, ExactReal};
 use crate::algebra::univariate::{RootInterval, UnivariatePolynomial};
 use crate::cad::projection::{
     build_projection_stack, formula_polynomials, ProjectionError, ProjectionStack,
@@ -35,6 +36,7 @@ pub enum FormulaEvaluationError {
 pub enum LiftingError {
     Projection(ProjectionError),
     AlgebraicBaseSampleUnsupported,
+    AlgebraicCoefficientRootUnsupported,
 }
 
 impl From<ProjectionError> for LiftingError {
@@ -65,7 +67,26 @@ impl TwoDimensionalLifting {
                 lifted
                     .iter()
                     .map(|cell| {
-                        evaluate_formula_at_lifted_cell(formula, variable_order[1], &values, cell)
+                        if base
+                            .exact_sample
+                            .as_ref()
+                            .is_some_and(|sample| sample.rational_value().is_none())
+                        {
+                            evaluate_formula_at_exact_lifted_cell(
+                                formula,
+                                variable_order[0],
+                                variable_order[1],
+                                base,
+                                cell,
+                            )
+                        } else {
+                            evaluate_formula_at_lifted_cell(
+                                formula,
+                                variable_order[1],
+                                &values,
+                                cell,
+                            )
+                        }
                     })
                     .collect()
             })
@@ -92,6 +113,15 @@ impl UnivariateCell {
         }
     }
 
+    fn section_algebraic(root: AlgebraicReal) -> Self {
+        Self {
+            sample: (&root.interval.lower + &root.interval.upper) / BigInt::from(2),
+            kind: CellKind::Section,
+            root: Some(root.interval.clone()),
+            exact_sample: Some(root),
+        }
+    }
+
     pub fn sign_of(&self, polynomial: &UnivariatePolynomial) -> i8 {
         if let Some(algebraic) = &self.exact_sample {
             algebraic.sign_of(polynomial)
@@ -105,6 +135,17 @@ impl UnivariateCell {
                 -1
             }
         }
+    }
+
+    pub fn sign_of_algebraic(&self, polynomial: &AlgebraicPolynomial) -> Result<i8, LiftingError> {
+        let value = polynomial
+            .evaluate(&exact_value(self))
+            .map_err(|_| LiftingError::AlgebraicCoefficientRootUnsupported)?;
+        Ok(match value.sign() {
+            std::cmp::Ordering::Less => -1,
+            std::cmp::Ordering::Equal => 0,
+            std::cmp::Ordering::Greater => 1,
+        })
     }
 
     pub fn satisfies(&self, polynomial: &UnivariatePolynomial, relation: Relation) -> bool {
@@ -269,7 +310,30 @@ pub fn lift_two_variables(
     for cell in &base_cells {
         if let Some(exact_sample) = &cell.exact_sample {
             if exact_sample.rational_value().is_none() {
-                return Err(LiftingError::AlgebraicBaseSampleUnsupported);
+                let mut values = std::collections::BTreeMap::new();
+                values.insert(
+                    variable_order[0],
+                    ExactReal::algebraic(exact_sample.clone()),
+                );
+                let specialized = original
+                    .iter()
+                    .map(|polynomial| {
+                        specialize_to_algebraic_univariate(polynomial, variable_order[1], &values)
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                let cells = decompose_linear_algebraic(&specialized)?;
+                let signs = cells
+                    .iter()
+                    .map(|lifted| {
+                        specialized
+                            .iter()
+                            .map(|polynomial| lifted.sign_of_algebraic(polynomial))
+                            .collect::<Result<Vec<_>, _>>()
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                lifted_cells.push(cells);
+                lifted_signs.push(signs);
+                continue;
             }
         }
         let mut values = std::collections::BTreeMap::new();
@@ -299,6 +363,56 @@ pub fn lift_two_variables(
         lifted_cells,
         lifted_signs,
     })
+}
+
+fn decompose_linear_algebraic(
+    polynomials: &[AlgebraicPolynomial],
+) -> Result<Vec<UnivariateCell>, LiftingError> {
+    let mut roots = Vec::new();
+    for polynomial in polynomials {
+        if polynomial.degree().unwrap_or(0) == 0 {
+            continue;
+        }
+        let root = polynomial
+            .linear_root()
+            .map_err(|_| LiftingError::AlgebraicCoefficientRootUnsupported)?
+            .ok_or(LiftingError::AlgebraicCoefficientRootUnsupported)?;
+        roots.push(exact_to_algebraic(root));
+    }
+    roots.sort_by(|left, right| left.compare(right));
+    roots.dedup_by(|left, right| left.compare(right) == std::cmp::Ordering::Equal);
+    if roots.is_empty() {
+        return Ok(vec![UnivariateCell::sector(BigRational::zero())]);
+    }
+    let mut cells = vec![UnivariateCell::sector(
+        &roots[0].interval.lower - BigRational::from_integer(1.into()),
+    )];
+    for (index, root) in roots.iter().cloned().enumerate() {
+        cells.push(UnivariateCell::section_algebraic(root.clone()));
+        if let Some(next) = roots.get(index + 1) {
+            cells.push(UnivariateCell::sector(
+                (&root.interval.upper + &next.interval.lower) / BigInt::from(2),
+            ));
+        } else {
+            cells.push(UnivariateCell::sector(
+                &root.interval.upper + BigRational::from_integer(1.into()),
+            ));
+        }
+    }
+    Ok(cells)
+}
+
+fn exact_to_algebraic(value: ExactReal) -> AlgebraicReal {
+    match value {
+        ExactReal::Algebraic(value) => value,
+        ExactReal::Rational(value) => AlgebraicReal::new(
+            UnivariatePolynomial::new(vec![-value.clone(), BigRational::from_integer(1.into())]),
+            RootInterval::new(
+                value.clone() - BigRational::from_integer(1.into()),
+                value + BigRational::from_integer(1.into()),
+            ),
+        ),
+    }
 }
 
 pub fn evaluate_formula_at_lifted_cell(
@@ -442,6 +556,22 @@ fn specialize_to_univariate(
         coefficients[monomial.exponent(variable)] += value;
     }
     UnivariatePolynomial::new(coefficients)
+}
+
+fn specialize_to_algebraic_univariate(
+    polynomial: &Polynomial,
+    variable: Variable,
+    values: &std::collections::BTreeMap<Variable, ExactReal>,
+) -> Result<AlgebraicPolynomial, LiftingError> {
+    let coefficients = (0..=polynomial.degree(variable))
+        .map(|degree| {
+            let coefficient = polynomial.coefficient_in(variable, degree);
+            coefficient
+                .evaluate_exact(values)
+                .map_err(|_| LiftingError::AlgebraicCoefficientRootUnsupported)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(AlgebraicPolynomial::new(coefficients))
 }
 
 fn to_univariate(polynomial: &Polynomial) -> Result<UnivariatePolynomial, FormulaEvaluationError> {
