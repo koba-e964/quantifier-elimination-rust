@@ -139,4 +139,14 @@ fn builds_a_two_variable_lifting_layer() {
         .iter()
         .zip(&lifting.lifted_cells)
         .all(|(signs, cells)| signs.len() == cells.len()));
+
+    let body = Formula::atom(
+        Polynomial::variable(0) * Polynomial::variable(0) + Polynomial::variable(1),
+        Relation::Equal,
+    );
+    let truth_table = lifting.truth_table(&body).unwrap();
+    assert_eq!(truth_table.len(), lifting.base_cells.len());
+    assert!(truth_table[0].iter().any(|value| *value));
+    assert!(truth_table[1].iter().any(|value| *value));
+    assert!(truth_table[2].iter().all(|value| !value));
 }

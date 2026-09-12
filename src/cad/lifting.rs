@@ -40,6 +40,26 @@ pub struct TwoDimensionalLifting {
     pub lifted_signs: Vec<Vec<Vec<i8>>>,
 }
 
+impl TwoDimensionalLifting {
+    pub fn truth_table(&self, formula: &Formula) -> Result<Vec<Vec<bool>>, FormulaEvaluationError> {
+        let variable_order = &self.projection_stack.variable_order;
+        self.base_cells
+            .iter()
+            .zip(&self.lifted_cells)
+            .map(|(base, lifted)| {
+                let mut values = std::collections::BTreeMap::new();
+                values.insert(variable_order[0], base.sample.clone());
+                lifted
+                    .iter()
+                    .map(|cell| {
+                        evaluate_formula_at_lifted_cell(formula, variable_order[1], &values, cell)
+                    })
+                    .collect()
+            })
+            .collect()
+    }
+}
+
 impl UnivariateCell {
     fn sector(sample: BigRational) -> Self {
         Self {
@@ -223,6 +243,32 @@ pub fn lift_two_variables(
         lifted_cells,
         lifted_signs,
     })
+}
+
+pub fn evaluate_formula_at_lifted_cell(
+    formula: &Formula,
+    variable: Variable,
+    values: &std::collections::BTreeMap<Variable, BigRational>,
+    cell: &UnivariateCell,
+) -> Result<bool, FormulaEvaluationError> {
+    match formula {
+        Formula::True => Ok(true),
+        Formula::False => Ok(false),
+        Formula::Atom(atom) => {
+            let polynomial = specialize_to_univariate(&atom.polynomial, variable, values);
+            Ok(cell.satisfies(&polynomial, atom.relation))
+        }
+        Formula::Not(body) => Ok(!evaluate_formula_at_lifted_cell(
+            body, variable, values, cell,
+        )?),
+        Formula::And(formulas) => formulas.iter().try_fold(true, |result, formula| {
+            Ok(result && evaluate_formula_at_lifted_cell(formula, variable, values, cell)?)
+        }),
+        Formula::Or(formulas) => formulas.iter().try_fold(false, |result, formula| {
+            Ok(result || evaluate_formula_at_lifted_cell(formula, variable, values, cell)?)
+        }),
+        Formula::Quantified { .. } => Err(FormulaEvaluationError::QuantifierNotSupported),
+    }
 }
 
 fn specialize_to_univariate(
