@@ -257,6 +257,17 @@ impl Polynomial {
                 sum + term
             })
     }
+
+    pub fn try_evaluate(&self, values: &BTreeMap<Variable, BigRational>) -> Option<BigRational> {
+        if self
+            .variables()
+            .any(|variable| !values.contains_key(&variable))
+        {
+            None
+        } else {
+            Some(self.evaluate(values))
+        }
+    }
 }
 
 impl Add for Polynomial {

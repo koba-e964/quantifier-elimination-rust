@@ -157,4 +157,8 @@ fn evaluates_quantifier_free_formulas_at_exact_rational_points() {
     values.insert(0, BigRational::from_integer(2.into()));
     assert_eq!(formula.evaluate(&values), Some(true));
     assert_eq!(Formula::exists(0, Formula::True).evaluate(&values), None);
+    assert_eq!(
+        Formula::atom(Polynomial::variable(1), Relation::Equal).evaluate(&values),
+        None
+    );
 }

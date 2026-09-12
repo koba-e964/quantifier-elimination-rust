@@ -107,7 +107,7 @@ impl Formula {
             Self::True => Some(true),
             Self::False => Some(false),
             Self::Atom(atom) => {
-                let value = atom.polynomial.evaluate(values);
+                let value = atom.polynomial.try_evaluate(values)?;
                 Some(match atom.relation {
                     Relation::Equal => value == BigRational::from_integer(0.into()),
                     Relation::NotEqual => value != BigRational::from_integer(0.into()),
