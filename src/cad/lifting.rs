@@ -297,6 +297,12 @@ pub fn synthesize_cell_conditions(
     variable: Variable,
 ) -> Formula {
     assert_eq!(cells.len(), truth_values.len(), "one truth value per cell");
+    if truth_values.iter().all(|truth| *truth) {
+        return Formula::True;
+    }
+    if truth_values.iter().all(|truth| !*truth) {
+        return Formula::False;
+    }
     let conditions = cells
         .iter()
         .zip(truth_values)
