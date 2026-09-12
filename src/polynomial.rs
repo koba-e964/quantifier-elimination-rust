@@ -1,0 +1,213 @@
+use num_bigint::BigInt;
+use num_rational::BigRational;
+use num_traits::{One, Signed, Zero};
+use std::collections::BTreeMap;
+use std::fmt;
+use std::ops::{Add, Mul, Neg, Sub};
+
+pub type Variable = usize;
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct Monomial(BTreeMap<Variable, usize>);
+
+impl Monomial {
+    pub fn one() -> Self {
+        Self::default()
+    }
+
+    pub fn variable(variable: Variable) -> Self {
+        let mut powers = BTreeMap::new();
+        powers.insert(variable, 1);
+        Self(powers)
+    }
+
+    pub fn exponent(&self, variable: Variable) -> usize {
+        self.0.get(&variable).copied().unwrap_or(0)
+    }
+
+    pub fn variables(&self) -> impl Iterator<Item = Variable> + '_ {
+        self.0.keys().copied()
+    }
+
+    pub fn total_degree(&self) -> usize {
+        self.0.values().sum()
+    }
+
+    fn multiplied(&self, rhs: &Self) -> Self {
+        let mut powers = self.0.clone();
+        for (&variable, &power) in &rhs.0 {
+            *powers.entry(variable).or_default() += power;
+        }
+        Self(powers)
+    }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct Polynomial {
+    terms: BTreeMap<Monomial, BigRational>,
+}
+
+impl Polynomial {
+    pub fn zero() -> Self {
+        Self::default()
+    }
+
+    pub fn one() -> Self {
+        Self::constant(BigRational::one())
+    }
+
+    pub fn constant(value: BigRational) -> Self {
+        if value.is_zero() {
+            return Self::zero();
+        }
+        let mut terms = BTreeMap::new();
+        terms.insert(Monomial::one(), value);
+        Self { terms }
+    }
+
+    pub fn integer(value: i64) -> Self {
+        Self::constant(BigRational::from_integer(BigInt::from(value)))
+    }
+
+    pub fn variable(variable: Variable) -> Self {
+        let mut terms = BTreeMap::new();
+        terms.insert(Monomial::variable(variable), BigRational::one());
+        Self { terms }
+    }
+
+    pub fn terms(&self) -> impl Iterator<Item = (&Monomial, &BigRational)> {
+        self.terms.iter()
+    }
+
+    pub fn coefficient(&self, monomial: &Monomial) -> BigRational {
+        self.terms.get(monomial).cloned().unwrap_or_default()
+    }
+
+    pub fn is_zero(&self) -> bool {
+        self.terms.is_empty()
+    }
+
+    pub fn variables(&self) -> impl Iterator<Item = Variable> {
+        self.terms
+            .keys()
+            .flat_map(Monomial::variables)
+            .collect::<std::collections::BTreeSet<_>>()
+            .into_iter()
+    }
+
+    pub fn degree(&self, variable: Variable) -> usize {
+        self.terms
+            .keys()
+            .map(|monomial| monomial.exponent(variable))
+            .max()
+            .unwrap_or(0)
+    }
+
+    pub fn evaluate(&self, values: &BTreeMap<Variable, BigRational>) -> BigRational {
+        self.terms
+            .iter()
+            .fold(BigRational::zero(), |sum, (monomial, coefficient)| {
+                let term = monomial
+                    .variables()
+                    .fold(coefficient.clone(), |value, variable| {
+                        let exponent = monomial.exponent(variable);
+                        let variable_value = values.get(&variable).cloned().unwrap_or_default();
+                        value * variable_value.pow(exponent as i32)
+                    });
+                sum + term
+            })
+    }
+}
+
+impl Add for Polynomial {
+    type Output = Self;
+
+    fn add(mut self, rhs: Self) -> Self::Output {
+        for (monomial, coefficient) in rhs.terms {
+            let entry = self.terms.entry(monomial.clone()).or_default();
+            *entry += coefficient;
+            if entry.is_zero() {
+                self.terms.remove(&monomial);
+            }
+        }
+        self
+    }
+}
+
+impl Sub for Polynomial {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        self + (-rhs)
+    }
+}
+
+impl Mul for Polynomial {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        let mut result = Self::zero();
+        for (left_monomial, left_coefficient) in self.terms {
+            for (right_monomial, right_coefficient) in &rhs.terms {
+                let monomial = left_monomial.multiplied(right_monomial);
+                let coefficient = left_coefficient.clone() * right_coefficient;
+                let entry = result.terms.entry(monomial.clone()).or_default();
+                *entry += coefficient;
+                if entry.is_zero() {
+                    result.terms.remove(&monomial);
+                }
+            }
+        }
+        result
+    }
+}
+
+impl Neg for Polynomial {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Self {
+            terms: self
+                .terms
+                .into_iter()
+                .map(|(monomial, coefficient)| (monomial, -coefficient))
+                .collect(),
+        }
+    }
+}
+
+impl fmt::Display for Polynomial {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.is_zero() {
+            return write!(formatter, "0");
+        }
+        let mut first = true;
+        for (monomial, coefficient) in &self.terms {
+            if !first && coefficient.is_positive() {
+                write!(formatter, " + ")?;
+            } else if coefficient.is_negative() {
+                write!(formatter, "{}", if first { "-" } else { " - " })?;
+            }
+            let magnitude = coefficient.abs();
+            if monomial.total_degree() == 0 || magnitude != BigRational::one() {
+                write!(formatter, "{}", magnitude)?;
+                if monomial.total_degree() != 0 {
+                    write!(formatter, "*")?;
+                }
+            }
+            let mut first_factor = true;
+            for variable in monomial.variables() {
+                if !first_factor {
+                    write!(formatter, "*")?;
+                }
+                write!(formatter, "x{}", variable)?;
+                if monomial.exponent(variable) > 1 {
+                    write!(formatter, "^{}", monomial.exponent(variable))?;
+                }
+                first_factor = false;
+            }
+            first = false;
+        }
+        Ok(())
+    }
+}
