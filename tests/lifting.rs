@@ -2,7 +2,8 @@ use num_rational::BigRational;
 use num_traits::Zero;
 use quantifier_elimination::algebra::univariate::UnivariatePolynomial;
 use quantifier_elimination::cad::lifting::{
-    cell_condition, decompose_univariate, lift_over_rational_sample, lift_two_variables, CellKind,
+    cell_condition, decompose_univariate, lift_over_rational_sample, lift_two_variables,
+    synthesize_cell_conditions, CellKind,
 };
 use quantifier_elimination::Polynomial;
 use quantifier_elimination::{Formula, Relation};
@@ -156,4 +157,22 @@ fn builds_a_two_variable_lifting_layer() {
         .map(|cell| cell_condition(cell, &lifting.base_polynomials, 1))
         .collect::<Vec<_>>();
     assert_eq!(conditions.len(), lifting.base_cells.len());
+}
+
+#[test]
+fn synthesizes_a_quantifier_free_formula_from_true_cells() {
+    let polynomial = UnivariatePolynomial::from_integers(&[-2, 0, 1]);
+    let cells = decompose_univariate(std::slice::from_ref(&polynomial));
+    let truth_values = cells
+        .iter()
+        .map(|cell| cell.sign_of(&polynomial) < 0)
+        .collect::<Vec<_>>();
+    let formula =
+        synthesize_cell_conditions(&cells, std::slice::from_ref(&polynomial), &truth_values, 0);
+
+    let evaluated = cells
+        .iter()
+        .map(|cell| cell.evaluate_formula(&formula).unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(evaluated, truth_values);
 }

@@ -290,6 +290,22 @@ pub fn cell_condition(
     Formula::And(atoms)
 }
 
+pub fn synthesize_cell_conditions(
+    cells: &[UnivariateCell],
+    polynomials: &[UnivariatePolynomial],
+    truth_values: &[bool],
+    variable: Variable,
+) -> Formula {
+    assert_eq!(cells.len(), truth_values.len(), "one truth value per cell");
+    let conditions = cells
+        .iter()
+        .zip(truth_values)
+        .filter(|(_, truth)| **truth)
+        .map(|(cell, _)| cell_condition(cell, polynomials, variable))
+        .collect::<Vec<_>>();
+    Formula::Or(conditions)
+}
+
 fn specialize_to_univariate(
     polynomial: &Polynomial,
     variable: Variable,
