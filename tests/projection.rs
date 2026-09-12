@@ -1,5 +1,5 @@
-use quantifier_elimination::cad::projection::{project, resultant};
-use quantifier_elimination::Polynomial;
+use quantifier_elimination::cad::projection::{build_projection_stack, project, resultant};
+use quantifier_elimination::{Formula, Polynomial, Relation};
 
 #[test]
 fn extracts_coefficients_and_derivatives() {
@@ -33,4 +33,21 @@ fn projection_contains_discriminant_and_resultant_data() {
     assert!(projected
         .iter()
         .any(|polynomial| polynomial.to_string() == "1"));
+}
+
+#[test]
+fn builds_projection_levels_in_variable_order() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let formula = Formula::exists(0, Formula::atom(x.clone() * x + y, Relation::Equal));
+    let stack = build_projection_stack(&formula, &[1, 0]);
+
+    assert_eq!(stack.variable_order, vec![1, 0]);
+    assert_eq!(stack.levels.len(), 3);
+    assert!(!stack.levels[0].is_empty());
+    assert!(!stack.levels[1].is_empty());
+    assert!(!stack.levels[2].is_empty());
+    assert!(stack.levels[2]
+        .iter()
+        .all(|polynomial| polynomial.variables().next().is_none()));
 }

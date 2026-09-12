@@ -1,3 +1,4 @@
+use crate::formula::Formula;
 use crate::polynomial::{Polynomial, Variable};
 
 /// Construct a Collins-style projection set for one variable.
@@ -26,6 +27,51 @@ pub fn project(polynomials: &[Polynomial], variable: Variable) -> Vec<Polynomial
         }
     }
     result
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ProjectionStack {
+    pub variable_order: Vec<Variable>,
+    pub levels: Vec<Vec<Polynomial>>,
+}
+
+/// Build projection sets from the input atoms, eliminating variables from
+/// highest to lowest according to `variable_order`.
+pub fn build_projection_stack(formula: &Formula, variable_order: &[Variable]) -> ProjectionStack {
+    let mut current = formula_polynomials(formula);
+    let mut levels = vec![current.clone()];
+    for variable in variable_order.iter().rev().copied() {
+        current = project(&current, variable);
+        levels.push(current.clone());
+    }
+    ProjectionStack {
+        variable_order: variable_order.to_vec(),
+        levels,
+    }
+}
+
+fn formula_polynomials(formula: &Formula) -> Vec<Polynomial> {
+    let mut polynomials = Vec::new();
+    collect_formula_polynomials(formula, &mut polynomials);
+    polynomials
+}
+
+fn collect_formula_polynomials(formula: &Formula, polynomials: &mut Vec<Polynomial>) {
+    match formula {
+        Formula::True | Formula::False => {}
+        Formula::Atom(atom) => {
+            if !polynomials.contains(&atom.polynomial) {
+                polynomials.push(atom.polynomial.clone());
+            }
+        }
+        Formula::Not(body) => collect_formula_polynomials(body, polynomials),
+        Formula::And(formulas) | Formula::Or(formulas) => {
+            for formula in formulas {
+                collect_formula_polynomials(formula, polynomials);
+            }
+        }
+        Formula::Quantified { body, .. } => collect_formula_polynomials(body, polynomials),
+    }
 }
 
 pub fn resultant(left: &Polynomial, right: &Polynomial, variable: Variable) -> Polynomial {
