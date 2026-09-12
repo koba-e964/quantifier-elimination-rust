@@ -1,5 +1,8 @@
 use num_rational::BigRational;
-use quantifier_elimination::{AlgebraicPolynomial, ExactReal};
+use std::cmp::Ordering;
+
+use num_traits::Zero;
+use quantifier_elimination::{AlgebraicPolynomial, ExactReal, ExactRealError};
 
 #[test]
 fn models_polynomials_with_exact_real_coefficients() {
@@ -10,4 +13,46 @@ fn models_polynomials_with_exact_real_coefficients() {
 
     assert_eq!(polynomial.degree(), Some(1));
     assert_eq!(polynomial.coefficients().len(), 2);
+}
+
+#[test]
+fn performs_exact_arithmetic_for_rational_coefficients() {
+    let left = ExactReal::rational(BigRational::from_integer(2.into()));
+    let right = ExactReal::rational(BigRational::from_integer(3.into()));
+
+    assert_eq!(
+        left.try_add(&right),
+        Ok(ExactReal::rational(BigRational::from_integer(5.into())))
+    );
+    assert_eq!(
+        left.try_sub(&right),
+        Ok(ExactReal::rational(BigRational::from_integer((-1).into())))
+    );
+    assert_eq!(
+        left.try_mul(&right),
+        Ok(ExactReal::rational(BigRational::from_integer(6.into())))
+    );
+    assert_eq!(left.sign(), Ordering::Greater);
+}
+
+#[test]
+fn reports_unimplemented_algebraic_binary_arithmetic() {
+    let rational = ExactReal::rational(BigRational::from_integer(2.into()));
+    let algebraic = ExactReal::algebraic(quantifier_elimination::AlgebraicReal::new(
+        quantifier_elimination::UnivariatePolynomial::new(vec![
+            BigRational::from_integer((-2).into()),
+            BigRational::zero(),
+            BigRational::from_integer(1.into()),
+        ]),
+        quantifier_elimination::RootInterval::new(
+            BigRational::from_integer(1.into()),
+            BigRational::from_integer(2.into()),
+        ),
+    ));
+
+    assert_eq!(algebraic.sign(), Ordering::Greater);
+    assert_eq!(
+        rational.try_add(&algebraic),
+        Err(ExactRealError::AlgebraicArithmeticNotImplemented)
+    );
 }
