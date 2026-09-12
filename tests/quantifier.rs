@@ -1,6 +1,7 @@
 use num_rational::BigRational;
 use quantifier_elimination::algebra::univariate::UnivariatePolynomial;
 use quantifier_elimination::cad::lifting::decompose_univariate;
+use quantifier_elimination::cad::lifting::LiftingError;
 use quantifier_elimination::qe::evaluate::{
     decide_univariate, eliminate, eliminate_one_variable, eliminate_univariate,
 };
@@ -224,6 +225,24 @@ fn handles_universal_strict_inequalities_and_disequalities() {
 
     let existential = Formula::exists(1, Formula::atom(y.clone() * y - x, Relation::NotEqual));
     assert_eq!(eliminate(&existential).unwrap(), Formula::True);
+}
+
+#[test]
+fn rejects_non_rational_base_sections_until_algebraic_substitution_exists() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let body = Formula::atom(
+        y.clone() * y - (x.clone() * x + Polynomial::integer(-2)),
+        Relation::Equal,
+    );
+    let formula = Formula::exists(1, body);
+
+    assert_eq!(
+        eliminate(&formula),
+        Err(QuantifierEvaluationError::Lifting(
+            LiftingError::AlgebraicBaseSampleUnsupported,
+        ))
+    );
 }
 
 #[test]
