@@ -71,3 +71,18 @@ fn identifies_rational_algebraic_samples_when_available() {
     let algebraic = quantifier_elimination::AlgebraicReal::new(defining, root);
     assert_eq!(algebraic.rational_value(), Some(BigRational::zero()));
 }
+
+#[test]
+fn compares_algebraic_real_samples_exactly() {
+    let defining = UnivariatePolynomial::from_integers(&[-2, 0, 1]);
+    let roots = defining.isolate_real_roots();
+    let negative = quantifier_elimination::AlgebraicReal::new(defining.clone(), roots[0].clone());
+    let positive = quantifier_elimination::AlgebraicReal::new(defining, roots[1].clone());
+    let one = UnivariatePolynomial::from_integers(&[-1, 1]);
+    let rational =
+        quantifier_elimination::AlgebraicReal::new(one.clone(), one.isolate_real_roots().remove(0));
+
+    assert_eq!(negative.compare(&positive), std::cmp::Ordering::Less);
+    assert_eq!(positive.compare(&rational), std::cmp::Ordering::Greater);
+    assert_eq!(positive.compare(&positive), std::cmp::Ordering::Equal);
+}

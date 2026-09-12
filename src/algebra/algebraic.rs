@@ -1,6 +1,7 @@
 use super::univariate::{RootInterval, UnivariatePolynomial};
 use num_bigint::BigInt;
 use num_traits::{Signed, Zero};
+use std::cmp::Ordering;
 
 /// An exact real algebraic number represented by a defining polynomial and an
 /// isolating interval containing exactly one of its real roots.
@@ -46,6 +47,41 @@ impl AlgebraicReal {
             interval = self
                 .polynomial
                 .refine_root(&interval, &(interval.width() / BigInt::from(2)));
+        }
+    }
+
+    pub fn compare(&self, other: &Self) -> Ordering {
+        let mut left = self.clone();
+        let mut right = other.clone();
+        loop {
+            if left.interval.upper < right.interval.lower {
+                return Ordering::Less;
+            }
+            if right.interval.upper < left.interval.lower {
+                return Ordering::Greater;
+            }
+            let lower = left
+                .interval
+                .lower
+                .clone()
+                .max(right.interval.lower.clone());
+            let upper = left
+                .interval
+                .upper
+                .clone()
+                .min(right.interval.upper.clone());
+            if lower < upper
+                && left
+                    .polynomial
+                    .gcd(&right.polynomial)
+                    .count_roots(&RootInterval::new(lower, upper))
+                    > 0
+            {
+                return Ordering::Equal;
+            }
+            let width = left.interval.width().min(right.interval.width()) / BigInt::from(2);
+            left = left.refine(&width);
+            right = right.refine(&width);
         }
     }
 }
