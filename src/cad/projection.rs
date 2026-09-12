@@ -83,7 +83,7 @@ pub fn build_projection_stack(
     })
 }
 
-fn formula_polynomials(formula: &Formula) -> Vec<Polynomial> {
+pub(crate) fn formula_polynomials(formula: &Formula) -> Vec<Polynomial> {
     let mut polynomials = Vec::new();
     collect_formula_polynomials(formula, &mut polynomials);
     polynomials

@@ -1,5 +1,6 @@
 use crate::algebra::algebraic::AlgebraicReal;
 use crate::algebra::univariate::{RootInterval, UnivariatePolynomial};
+use crate::cad::projection::{build_projection_stack, formula_polynomials, ProjectionError};
 use crate::formula::Formula;
 use crate::formula::Relation;
 use crate::polynomial::{Polynomial, Variable};
@@ -25,6 +26,12 @@ pub struct UnivariateCell {
 pub enum FormulaEvaluationError {
     NonUnivariatePolynomial,
     QuantifierNotSupported,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TwoDimensionalLifting {
+    pub base_cells: Vec<UnivariateCell>,
+    pub lifted_cells: Vec<Vec<UnivariateCell>>,
 }
 
 impl UnivariateCell {
@@ -144,6 +151,45 @@ pub fn lift_over_rational_sample(
         .map(|polynomial| specialize_to_univariate(polynomial, variable, values))
         .collect::<Vec<_>>();
     decompose_univariate(&specialized)
+}
+
+/// Build the first recursive lifting layer for a two-variable formula. Lower
+/// cells are sampled rationally until exact algebraic substitution is wired
+/// into the multivariate evaluator.
+pub fn lift_two_variables(
+    formula: &Formula,
+    variable_order: &[Variable; 2],
+) -> Result<TwoDimensionalLifting, ProjectionError> {
+    let stack = build_projection_stack(formula, variable_order)?;
+    let base_polynomials = stack.levels[1]
+        .iter()
+        .filter(|polynomial| {
+            polynomial
+                .variables()
+                .all(|variable| variable == variable_order[0])
+        })
+        .map(|polynomial| {
+            specialize_to_univariate(
+                polynomial,
+                variable_order[0],
+                &std::collections::BTreeMap::new(),
+            )
+        })
+        .collect::<Vec<_>>();
+    let base_cells = decompose_univariate(&base_polynomials);
+    let original = formula_polynomials(formula);
+    let lifted_cells = base_cells
+        .iter()
+        .map(|cell| {
+            let mut values = std::collections::BTreeMap::new();
+            values.insert(variable_order[0], cell.sample.clone());
+            lift_over_rational_sample(&original, variable_order[1], &values)
+        })
+        .collect();
+    Ok(TwoDimensionalLifting {
+        base_cells,
+        lifted_cells,
+    })
 }
 
 fn specialize_to_univariate(

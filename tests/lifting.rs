@@ -2,7 +2,7 @@ use num_rational::BigRational;
 use num_traits::Zero;
 use quantifier_elimination::algebra::univariate::UnivariatePolynomial;
 use quantifier_elimination::cad::lifting::{
-    decompose_univariate, lift_over_rational_sample, CellKind,
+    decompose_univariate, lift_over_rational_sample, lift_two_variables, CellKind,
 };
 use quantifier_elimination::Polynomial;
 use quantifier_elimination::{Formula, Relation};
@@ -117,4 +117,16 @@ fn evaluates_boolean_formulas_on_cells() {
         .map(|cell| cell.evaluate_formula(&formula).unwrap())
         .collect::<Vec<_>>();
     assert_eq!(values, vec![false, true, false, true, false]);
+}
+
+#[test]
+fn builds_a_two_variable_lifting_layer() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let formula = Formula::exists(0, Formula::atom(x.clone() * x + y, Relation::Equal));
+    let lifting = lift_two_variables(&formula, &[1, 0]).unwrap();
+
+    assert_eq!(lifting.base_cells.len(), 3);
+    assert_eq!(lifting.lifted_cells.len(), lifting.base_cells.len());
+    assert!(lifting.lifted_cells.iter().all(|cells| !cells.is_empty()));
 }
