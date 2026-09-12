@@ -208,6 +208,25 @@ fn eliminates_boolean_combinations_and_strict_inequalities() {
 }
 
 #[test]
+fn handles_universal_strict_inequalities_and_disequalities() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let universal = Formula::forall(
+        1,
+        Formula::atom(y.clone() * y.clone() + x.clone(), Relation::Greater),
+    );
+    let eliminated = eliminate(&universal).unwrap();
+    for (value, expected) in [(-1, false), (0, false), (1, true)] {
+        let mut assignment = BTreeMap::new();
+        assignment.insert(0, BigRational::from_integer(value.into()));
+        assert_eq!(eliminated.evaluate(&assignment), Some(expected));
+    }
+
+    let existential = Formula::exists(1, Formula::atom(y.clone() * y - x, Relation::NotEqual));
+    assert_eq!(eliminate(&existential).unwrap(), Formula::True);
+}
+
+#[test]
 fn reports_unsupported_elimination_shapes() {
     let x = Polynomial::variable(0);
     let z = Polynomial::variable(2);
