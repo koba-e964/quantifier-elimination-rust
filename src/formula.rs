@@ -1,4 +1,5 @@
 use crate::polynomial::Polynomial;
+use std::collections::BTreeSet;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Relation {
@@ -64,6 +65,22 @@ impl Formula {
             quantifier: Quantifier::Forall,
             variable,
             body: Box::new(body),
+        }
+    }
+
+    pub fn free_variables(&self) -> BTreeSet<usize> {
+        match self {
+            Self::True | Self::False => BTreeSet::new(),
+            Self::Atom(atom) => atom.polynomial.variables().collect(),
+            Self::Not(body) => body.free_variables(),
+            Self::And(formulas) | Self::Or(formulas) => {
+                formulas.iter().flat_map(Self::free_variables).collect()
+            }
+            Self::Quantified { variable, body, .. } => {
+                let mut variables = body.free_variables();
+                variables.remove(variable);
+                variables
+            }
         }
     }
 }

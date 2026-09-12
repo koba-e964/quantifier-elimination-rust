@@ -72,3 +72,21 @@ fn simplifies_boolean_identities_and_flattens_connectives() {
         Formula::True
     );
 }
+
+#[test]
+fn tracks_free_variables_across_quantifier_scopes() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let formula = Formula::exists(
+        0,
+        Formula::And(vec![
+            Formula::atom(x + y.clone(), Relation::Equal),
+            Formula::atom(y, Relation::Greater),
+        ]),
+    );
+
+    assert_eq!(
+        formula.free_variables().into_iter().collect::<Vec<_>>(),
+        vec![1]
+    );
+}
