@@ -9,6 +9,7 @@ pub mod algebra;
 pub mod cad;
 pub mod formula;
 pub mod polynomial;
+pub mod qe;
 
 pub use algebra::algebraic::AlgebraicReal;
 pub use algebra::univariate::{RootInterval, UnivariatePolynomial};
