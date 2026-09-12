@@ -2,7 +2,7 @@ use num_rational::BigRational;
 use quantifier_elimination::algebra::univariate::UnivariatePolynomial;
 use quantifier_elimination::cad::lifting::decompose_univariate;
 use quantifier_elimination::qe::evaluate::{
-    decide_univariate, eliminate_one_variable, eliminate_univariate,
+    decide_univariate, eliminate, eliminate_one_variable, eliminate_univariate,
 };
 use quantifier_elimination::qe::normalize::to_nnf;
 use quantifier_elimination::qe::simplify::simplify;
@@ -161,4 +161,15 @@ fn evaluates_quantifier_free_formulas_at_exact_rational_points() {
         Formula::atom(Polynomial::variable(1), Relation::Equal).evaluate(&values),
         None
     );
+}
+
+#[test]
+fn dispatches_supported_elimination_paths() {
+    let x = Polynomial::variable(0);
+    let closed = Formula::exists(0, Formula::atom(x.clone() * x.clone(), Relation::Equal));
+    assert_eq!(eliminate(&closed).unwrap(), Formula::True);
+
+    let y = Polynomial::variable(1);
+    let parameterized = Formula::exists(1, Formula::atom(y.clone() * y - x, Relation::Equal));
+    assert!(eliminate(&parameterized).unwrap().is_quantifier_free());
 }

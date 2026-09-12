@@ -65,6 +65,21 @@ pub fn eliminate_univariate(formula: &Formula) -> Result<Formula, QuantifierEval
     })
 }
 
+/// Dispatch to the currently supported quantifier-elimination paths.
+pub fn eliminate(formula: &Formula) -> Result<Formula, QuantifierEvaluationError> {
+    let Formula::Quantified { variable, .. } = formula else {
+        return Err(QuantifierEvaluationError::WrongVariable);
+    };
+    let free_variables = formula.free_variables();
+    if free_variables.is_empty() {
+        eliminate_univariate(formula)
+    } else if free_variables.len() == 1 {
+        eliminate_one_variable(formula, *free_variables.first().unwrap(), *variable)
+    } else {
+        Err(QuantifierEvaluationError::WrongVariable)
+    }
+}
+
 /// Eliminate one quantified variable from a formula with exactly one free
 /// variable. The current implementation uses the two-dimensional CAD layer.
 pub fn eliminate_one_variable(
