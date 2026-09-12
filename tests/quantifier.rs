@@ -167,7 +167,10 @@ fn evaluates_quantifier_free_formulas_at_exact_rational_points() {
 fn dispatches_supported_elimination_paths() {
     let x = Polynomial::variable(0);
     let closed = Formula::exists(0, Formula::atom(x.clone() * x.clone(), Relation::Equal));
-    assert_eq!(eliminate(&closed).unwrap(), Formula::True);
+    assert_eq!(
+        quantifier_elimination::eliminate(&closed).unwrap(),
+        Formula::True
+    );
 
     let y = Polynomial::variable(1);
     let parameterized = Formula::exists(1, Formula::atom(y.clone() * y - x, Relation::Equal));
