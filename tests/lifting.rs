@@ -45,6 +45,20 @@ fn separates_distinct_roots_from_different_polynomials() {
 }
 
 #[test]
+fn deduplicates_common_roots_from_different_polynomials() {
+    let cells = decompose_univariate(&[
+        UnivariatePolynomial::from_integers(&[-2, 0, 1]),
+        UnivariatePolynomial::from_integers(&[-4, 0, 2]),
+    ]);
+    let sections = cells
+        .iter()
+        .filter(|cell| matches!(cell.kind, CellKind::Section))
+        .count();
+
+    assert_eq!(sections, 2);
+}
+
+#[test]
 fn specializes_lower_variables_before_lifting() {
     let x = Polynomial::variable(0);
     let y = Polynomial::variable(1);
