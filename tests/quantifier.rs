@@ -126,6 +126,11 @@ fn eliminates_one_variable_and_preserves_the_free_variable() {
         vec![0]
     );
     assert!(eliminated.is_quantifier_free());
+    for (value, expected) in [(-1, false), (0, true), (4, true)] {
+        let mut assignment = BTreeMap::new();
+        assignment.insert(0, BigRational::from_integer(value.into()));
+        assert_eq!(eliminated.evaluate(&assignment), Some(expected));
+    }
     let cells = decompose_univariate(&[UnivariatePolynomial::from_integers(&[0, 1])]);
     let values = cells
         .iter()
