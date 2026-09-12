@@ -28,3 +28,14 @@ fn sturm_handles_no_real_roots() {
     let polynomial = UnivariatePolynomial::from_integers(&[1, 0, 1]);
     assert!(polynomial.isolate_real_roots().is_empty());
 }
+
+#[test]
+fn refines_an_isolating_interval_exactly() {
+    let polynomial = UnivariatePolynomial::from_integers(&[-2, 0, 1]);
+    let root = polynomial.isolate_real_roots().remove(1);
+    let maximum_width = BigRational::new(1.into(), 100.into());
+    let refined = polynomial.refine_root(&root, &maximum_width);
+
+    assert!(refined.width() <= maximum_width);
+    assert!(refined.lower < refined.upper);
+}

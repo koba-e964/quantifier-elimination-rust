@@ -20,6 +20,10 @@ impl RootInterval {
         assert!(lower < upper, "root intervals must have positive width");
         Self { lower, upper }
     }
+
+    pub fn width(&self) -> BigRational {
+        &self.upper - &self.lower
+    }
 }
 
 impl UnivariatePolynomial {
@@ -162,6 +166,39 @@ impl UnivariatePolynomial {
         intervals
     }
 
+    pub fn refine_root(
+        &self,
+        interval: &RootInterval,
+        maximum_width: &BigRational,
+    ) -> RootInterval {
+        assert!(
+            !self.is_zero(),
+            "cannot refine a root of the zero polynomial"
+        );
+        assert!(
+            interval.lower < interval.upper,
+            "root interval must have positive width"
+        );
+        assert!(
+            self.root_count(interval) == 1,
+            "interval must isolate one root"
+        );
+        let sequence = self.sturm_sequence();
+        let mut lower = interval.lower.clone();
+        let mut upper = interval.upper.clone();
+        while &upper - &lower > *maximum_width {
+            let midpoint = (&lower + &upper) / BigInt::from(2);
+            let left_count = Self::variations_at(&sequence, &lower)
+                .saturating_sub(Self::variations_at(&sequence, &midpoint));
+            if left_count == 1 {
+                upper = midpoint;
+            } else {
+                lower = midpoint;
+            }
+        }
+        RootInterval::new(lower, upper)
+    }
+
     fn root_bound(&self) -> BigRational {
         let leading = self.leading_coefficient().unwrap().abs();
         let max_ratio = self
@@ -172,6 +209,12 @@ impl UnivariatePolynomial {
             .max()
             .unwrap_or_else(BigRational::zero);
         max_ratio + BigRational::one()
+    }
+
+    fn root_count(&self, interval: &RootInterval) -> usize {
+        let sequence = self.sturm_sequence();
+        Self::variations_at(&sequence, &interval.lower)
+            .saturating_sub(Self::variations_at(&sequence, &interval.upper))
     }
 
     fn variations_at(sequence: &[Self], point: &BigRational) -> usize {

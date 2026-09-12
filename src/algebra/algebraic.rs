@@ -15,4 +15,11 @@ impl AlgebraicReal {
             interval,
         }
     }
+
+    pub fn refine(&self, maximum_width: &num_rational::BigRational) -> Self {
+        Self {
+            polynomial: self.polynomial.clone(),
+            interval: self.polynomial.refine_root(&self.interval, maximum_width),
+        }
+    }
 }
