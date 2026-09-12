@@ -1,5 +1,6 @@
 use quantifier_elimination::qe::evaluate::{decide_univariate, eliminate_univariate};
 use quantifier_elimination::qe::normalize::to_nnf;
+use quantifier_elimination::qe::simplify::simplify;
 use quantifier_elimination::{Formula, Polynomial, Relation};
 
 #[test]
@@ -55,4 +56,19 @@ fn normalizes_negation_and_dualizes_quantifiers() {
     );
 
     assert_eq!(to_nnf(&formula), expected);
+}
+
+#[test]
+fn simplifies_boolean_identities_and_flattens_connectives() {
+    let x = Polynomial::variable(0);
+    let atom = Formula::atom(x, Relation::Equal);
+    let formula = Formula::And(vec![
+        Formula::True,
+        Formula::And(vec![atom.clone(), Formula::True]),
+    ]);
+    assert_eq!(simplify(&formula), atom);
+    assert_eq!(
+        simplify(&Formula::Or(vec![Formula::False, Formula::True])),
+        Formula::True
+    );
 }
