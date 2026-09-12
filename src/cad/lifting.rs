@@ -1,6 +1,8 @@
 use crate::algebra::algebraic::AlgebraicReal;
 use crate::algebra::univariate::{RootInterval, UnivariatePolynomial};
-use crate::cad::projection::{build_projection_stack, formula_polynomials, ProjectionError};
+use crate::cad::projection::{
+    build_projection_stack, formula_polynomials, ProjectionError, ProjectionStack,
+};
 use crate::formula::Formula;
 use crate::formula::Relation;
 use crate::polynomial::{Polynomial, Variable};
@@ -30,6 +32,8 @@ pub enum FormulaEvaluationError {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TwoDimensionalLifting {
+    pub projection_stack: ProjectionStack,
+    pub base_polynomials: Vec<UnivariatePolynomial>,
     pub base_cells: Vec<UnivariateCell>,
     pub lifted_cells: Vec<Vec<UnivariateCell>>,
 }
@@ -187,6 +191,8 @@ pub fn lift_two_variables(
         })
         .collect();
     Ok(TwoDimensionalLifting {
+        projection_stack: stack,
+        base_polynomials,
         base_cells,
         lifted_cells,
     })

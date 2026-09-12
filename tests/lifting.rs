@@ -127,6 +127,8 @@ fn builds_a_two_variable_lifting_layer() {
     let lifting = lift_two_variables(&formula, &[1, 0]).unwrap();
 
     assert_eq!(lifting.base_cells.len(), 3);
+    assert_eq!(lifting.projection_stack.variable_order, vec![1, 0]);
+    assert!(!lifting.base_polynomials.is_empty());
     assert_eq!(lifting.lifted_cells.len(), lifting.base_cells.len());
     assert!(lifting.lifted_cells.iter().all(|cells| !cells.is_empty()));
 }
