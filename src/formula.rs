@@ -1,5 +1,6 @@
 use crate::polynomial::Polynomial;
-use std::collections::BTreeSet;
+use num_rational::BigRational;
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Relation {
@@ -98,6 +99,34 @@ impl Formula {
                 formulas.iter().all(Self::is_quantifier_free)
             }
             Self::Quantified { .. } => false,
+        }
+    }
+
+    pub fn evaluate(&self, values: &BTreeMap<usize, BigRational>) -> Option<bool> {
+        match self {
+            Self::True => Some(true),
+            Self::False => Some(false),
+            Self::Atom(atom) => {
+                let value = atom.polynomial.evaluate(values);
+                Some(match atom.relation {
+                    Relation::Equal => value == BigRational::from_integer(0.into()),
+                    Relation::NotEqual => value != BigRational::from_integer(0.into()),
+                    Relation::Less => value < BigRational::from_integer(0.into()),
+                    Relation::LessOrEqual => value <= BigRational::from_integer(0.into()),
+                    Relation::Greater => value > BigRational::from_integer(0.into()),
+                    Relation::GreaterOrEqual => value >= BigRational::from_integer(0.into()),
+                })
+            }
+            Self::Not(body) => Some(!body.evaluate(values)?),
+            Self::And(formulas) => formulas
+                .iter()
+                .map(|formula| formula.evaluate(values))
+                .try_fold(true, |result, value| Some(result && value?)),
+            Self::Or(formulas) => formulas
+                .iter()
+                .map(|formula| formula.evaluate(values))
+                .try_fold(false, |result, value| Some(result || value?)),
+            Self::Quantified { .. } => None,
         }
     }
 

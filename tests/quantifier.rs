@@ -1,3 +1,4 @@
+use num_rational::BigRational;
 use quantifier_elimination::algebra::univariate::UnivariatePolynomial;
 use quantifier_elimination::cad::lifting::decompose_univariate;
 use quantifier_elimination::qe::evaluate::{
@@ -6,6 +7,7 @@ use quantifier_elimination::qe::evaluate::{
 use quantifier_elimination::qe::normalize::to_nnf;
 use quantifier_elimination::qe::simplify::simplify;
 use quantifier_elimination::{Formula, Polynomial, Relation, RenameError};
+use std::collections::BTreeMap;
 
 #[test]
 fn decides_existential_polynomial_formulas() {
@@ -143,4 +145,16 @@ fn eliminates_a_universal_variable() {
     assert!(cells
         .iter()
         .all(|cell| cell.evaluate_formula(&eliminated).unwrap()));
+}
+
+#[test]
+fn evaluates_quantifier_free_formulas_at_exact_rational_points() {
+    let x = Polynomial::variable(0);
+    let formula = Formula::atom(x, Relation::GreaterOrEqual);
+    let mut values = BTreeMap::new();
+    values.insert(0, BigRational::from_integer((-1).into()));
+    assert_eq!(formula.evaluate(&values), Some(false));
+    values.insert(0, BigRational::from_integer(2.into()));
+    assert_eq!(formula.evaluate(&values), Some(true));
+    assert_eq!(Formula::exists(0, Formula::True).evaluate(&values), None);
 }
