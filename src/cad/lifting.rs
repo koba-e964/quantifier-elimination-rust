@@ -1,3 +1,4 @@
+use crate::algebra::algebraic::AlgebraicReal;
 use crate::algebra::univariate::{RootInterval, UnivariatePolynomial};
 use crate::polynomial::{Polynomial, Variable};
 use num_bigint::BigInt;
@@ -15,6 +16,7 @@ pub struct UnivariateCell {
     pub kind: CellKind,
     pub sample: BigRational,
     pub root: Option<RootInterval>,
+    pub exact_sample: Option<AlgebraicReal>,
 }
 
 impl UnivariateCell {
@@ -23,13 +25,15 @@ impl UnivariateCell {
             kind: CellKind::Sector,
             sample,
             root: None,
+            exact_sample: None,
         }
     }
 
-    fn section(root: RootInterval) -> Self {
+    fn section(polynomial: UnivariatePolynomial, root: RootInterval) -> Self {
         Self {
             sample: (&root.lower + &root.upper) / BigInt::from(2),
             kind: CellKind::Section,
+            exact_sample: Some(AlgebraicReal::new(polynomial, root.clone())),
             root: Some(root),
         }
     }
@@ -40,10 +44,15 @@ impl UnivariateCell {
 pub fn decompose_univariate(polynomials: &[UnivariatePolynomial]) -> Vec<UnivariateCell> {
     let mut roots = polynomials
         .iter()
-        .flat_map(UnivariatePolynomial::isolate_real_roots)
+        .flat_map(|polynomial| {
+            polynomial
+                .isolate_real_roots()
+                .into_iter()
+                .map(|root| (polynomial.clone(), root))
+        })
         .collect::<Vec<_>>();
-    roots.sort_by(|left, right| left.lower.cmp(&right.lower));
-    roots.dedup_by(|left, right| left == right);
+    roots.sort_by(|left, right| left.1.lower.cmp(&right.1.lower));
+    roots.dedup_by(|left, right| left.1 == right.1);
 
     if roots.is_empty() {
         return vec![UnivariateCell::sector(BigRational::zero())];
@@ -51,13 +60,13 @@ pub fn decompose_univariate(polynomials: &[UnivariatePolynomial]) -> Vec<Univari
 
     let mut cells = Vec::with_capacity(roots.len() * 2 + 1);
     cells.push(UnivariateCell::sector(
-        &roots[0].lower - BigRational::from_integer(BigInt::from(1)),
+        &roots[0].1.lower - BigRational::from_integer(BigInt::from(1)),
     ));
-    for (index, root) in roots.iter().cloned().enumerate() {
-        cells.push(UnivariateCell::section(root.clone()));
+    for (index, (polynomial, root)) in roots.iter().cloned().enumerate() {
+        cells.push(UnivariateCell::section(polynomial, root.clone()));
         if let Some(next) = roots.get(index + 1) {
             cells.push(UnivariateCell::sector(
-                (&root.upper + &next.lower) / BigInt::from(2),
+                (&root.upper + &next.1.lower) / BigInt::from(2),
             ));
         } else {
             cells.push(UnivariateCell::sector(

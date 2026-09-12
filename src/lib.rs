@@ -10,6 +10,7 @@ pub mod cad;
 pub mod formula;
 pub mod polynomial;
 
+pub use algebra::algebraic::AlgebraicReal;
 pub use algebra::univariate::{RootInterval, UnivariatePolynomial};
 pub use formula::{Atom, Formula, Quantifier, Relation};
 pub use polynomial::{Monomial, Polynomial, Variable, VariableNames};

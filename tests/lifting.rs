@@ -47,6 +47,12 @@ fn specializes_lower_variables_before_lifting() {
     // stores an isolating interval until exact algebraic samples are added.
     assert!(matches!(cells[1].kind, CellKind::Section));
     let first_root = cells[1].root.as_ref().expect("first section has a root");
+    let first_exact = cells[1]
+        .exact_sample
+        .as_ref()
+        .expect("first section has an exact sample");
+    assert_eq!(first_exact.polynomial.to_string(), "x^2 - 2");
+    assert_eq!(first_exact.interval, first_root.clone());
     assert!(first_root.lower < first_root.upper);
     assert!(first_root.lower <= cells[1].sample);
     assert!(cells[1].sample <= first_root.upper);
@@ -61,6 +67,12 @@ fn specializes_lower_variables_before_lifting() {
     // interval for now.
     assert!(matches!(cells[3].kind, CellKind::Section));
     let second_root = cells[3].root.as_ref().expect("second section has a root");
+    let second_exact = cells[3]
+        .exact_sample
+        .as_ref()
+        .expect("second section has an exact sample");
+    assert_eq!(second_exact.polynomial.to_string(), "x^2 - 2");
+    assert_eq!(second_exact.interval, second_root.clone());
     assert!(second_root.lower < second_root.upper);
     assert!(second_root.lower <= cells[3].sample);
     assert!(cells[3].sample <= second_root.upper);
