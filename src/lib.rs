@@ -5,8 +5,10 @@
 //! canonical multivariate polynomials, and quantified formula syntax.  CAD
 //! elimination is built on these types.
 
+pub mod algebra;
 pub mod formula;
 pub mod polynomial;
 
+pub use algebra::univariate::{RootInterval, UnivariatePolynomial};
 pub use formula::{Atom, Formula, Quantifier, Relation};
 pub use polynomial::{Monomial, Polynomial, Variable};
