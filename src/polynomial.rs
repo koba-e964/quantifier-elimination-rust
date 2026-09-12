@@ -7,6 +7,33 @@ use std::ops::{Add, Mul, Neg, Sub};
 
 pub type Variable = usize;
 
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct VariableNames {
+    names: BTreeMap<Variable, String>,
+}
+
+impl VariableNames {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn insert(&mut self, variable: Variable, name: impl Into<String>) {
+        self.names.insert(variable, name.into());
+    }
+
+    pub fn with(mut self, variable: Variable, name: impl Into<String>) -> Self {
+        self.insert(variable, name);
+        self
+    }
+
+    pub fn name(&self, variable: Variable) -> String {
+        self.names
+            .get(&variable)
+            .cloned()
+            .unwrap_or_else(|| format!("x{}", variable))
+    }
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Monomial(BTreeMap<Variable, usize>);
 
@@ -103,6 +130,86 @@ impl Polynomial {
             .unwrap_or(0)
     }
 
+    pub fn coefficient_in(&self, variable: Variable, degree: usize) -> Self {
+        let mut result = Self::zero();
+        for (monomial, coefficient) in &self.terms {
+            if monomial.exponent(variable) != degree {
+                continue;
+            }
+            let mut reduced = monomial.0.clone();
+            reduced.remove(&variable);
+            let entry = result.terms.entry(Monomial(reduced)).or_default();
+            *entry += coefficient.clone();
+        }
+        result.terms.retain(|_, coefficient| !coefficient.is_zero());
+        result
+    }
+
+    pub fn derivative(&self, variable: Variable) -> Self {
+        let mut result = Self::zero();
+        for (monomial, coefficient) in &self.terms {
+            let exponent = monomial.exponent(variable);
+            if exponent == 0 {
+                continue;
+            }
+            let mut reduced = monomial.0.clone();
+            if exponent == 1 {
+                reduced.remove(&variable);
+            } else {
+                reduced.insert(variable, exponent - 1);
+            }
+            let term = coefficient * num_bigint::BigInt::from(exponent);
+            let entry = result.terms.entry(Monomial(reduced)).or_default();
+            *entry += term;
+        }
+        result.terms.retain(|_, coefficient| !coefficient.is_zero());
+        result
+    }
+
+    pub fn pow(&self, exponent: usize) -> Self {
+        (0..exponent).fold(Self::one(), |result, _| result * self.clone())
+    }
+
+    pub fn to_string_with(&self, names: &VariableNames) -> String {
+        self.format_with(names)
+    }
+
+    fn format_with(&self, names: &VariableNames) -> String {
+        if self.is_zero() {
+            return "0".to_owned();
+        }
+        let mut output = String::new();
+        let mut first = true;
+        for (monomial, coefficient) in &self.terms {
+            if !first && coefficient.is_positive() {
+                output.push_str(" + ");
+            } else if coefficient.is_negative() {
+                output.push_str(if first { "-" } else { " - " });
+            }
+            let magnitude = coefficient.abs();
+            if monomial.total_degree() == 0 || magnitude != BigRational::one() {
+                output.push_str(&magnitude.to_string());
+                if monomial.total_degree() != 0 {
+                    output.push('*');
+                }
+            }
+            let mut first_factor = true;
+            for variable in monomial.variables() {
+                if !first_factor {
+                    output.push('*');
+                }
+                output.push_str(&names.name(variable));
+                if monomial.exponent(variable) > 1 {
+                    output.push('^');
+                    output.push_str(&monomial.exponent(variable).to_string());
+                }
+                first_factor = false;
+            }
+            first = false;
+        }
+        output
+    }
+
     pub fn evaluate(&self, values: &BTreeMap<Variable, BigRational>) -> BigRational {
         self.terms
             .iter()
@@ -178,36 +285,6 @@ impl Neg for Polynomial {
 
 impl fmt::Display for Polynomial {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.is_zero() {
-            return write!(formatter, "0");
-        }
-        let mut first = true;
-        for (monomial, coefficient) in &self.terms {
-            if !first && coefficient.is_positive() {
-                write!(formatter, " + ")?;
-            } else if coefficient.is_negative() {
-                write!(formatter, "{}", if first { "-" } else { " - " })?;
-            }
-            let magnitude = coefficient.abs();
-            if monomial.total_degree() == 0 || magnitude != BigRational::one() {
-                write!(formatter, "{}", magnitude)?;
-                if monomial.total_degree() != 0 {
-                    write!(formatter, "*")?;
-                }
-            }
-            let mut first_factor = true;
-            for variable in monomial.variables() {
-                if !first_factor {
-                    write!(formatter, "*")?;
-                }
-                write!(formatter, "x{}", variable)?;
-                if monomial.exponent(variable) > 1 {
-                    write!(formatter, "^{}", monomial.exponent(variable))?;
-                }
-                first_factor = false;
-            }
-            first = false;
-        }
-        Ok(())
+        formatter.write_str(&self.format_with(&VariableNames::default()))
     }
 }

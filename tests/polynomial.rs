@@ -1,5 +1,5 @@
 use num_rational::BigRational;
-use quantifier_elimination::Polynomial;
+use quantifier_elimination::{Polynomial, VariableNames};
 use std::collections::BTreeMap;
 
 #[test]
@@ -22,4 +22,13 @@ fn polynomial_arithmetic_is_exact() {
 fn zero_terms_are_removed() {
     let x = Polynomial::variable(0);
     assert!((x.clone() - x).is_zero());
+}
+
+#[test]
+fn variables_can_have_stable_display_names() {
+    let expression = Polynomial::variable(0) * Polynomial::variable(1);
+    let names = VariableNames::new().with(0, "x").with(1, "y");
+
+    assert_eq!(expression.to_string_with(&names), "x*y");
+    assert_eq!(expression.to_string(), "x0*x1");
 }

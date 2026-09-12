@@ -6,9 +6,10 @@
 //! elimination is built on these types.
 
 pub mod algebra;
+pub mod cad;
 pub mod formula;
 pub mod polynomial;
 
 pub use algebra::univariate::{RootInterval, UnivariatePolynomial};
 pub use formula::{Atom, Formula, Quantifier, Relation};
-pub use polynomial::{Monomial, Polynomial, Variable};
+pub use polynomial::{Monomial, Polynomial, Variable, VariableNames};
