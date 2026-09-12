@@ -7,6 +7,12 @@ use std::ops::{Add, Mul, Neg, Sub};
 
 pub type Variable = usize;
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum PolynomialEvaluationError {
+    MissingVariable(Variable),
+    Arithmetic(crate::algebra::coefficient::ExactRealError),
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct VariableNames {
     names: BTreeMap<Variable, String>,
@@ -267,6 +273,31 @@ impl Polynomial {
         } else {
             Some(self.evaluate(values))
         }
+    }
+
+    pub fn evaluate_exact(
+        &self,
+        values: &BTreeMap<Variable, crate::algebra::coefficient::ExactReal>,
+    ) -> Result<crate::algebra::coefficient::ExactReal, PolynomialEvaluationError> {
+        self.terms.iter().try_fold(
+            crate::algebra::coefficient::ExactReal::rational(BigRational::zero()),
+            |sum, (monomial, coefficient)| {
+                let term = monomial.variables().try_fold(
+                    crate::algebra::coefficient::ExactReal::rational(coefficient.clone()),
+                    |term, variable| {
+                        let value = values
+                            .get(&variable)
+                            .ok_or(PolynomialEvaluationError::MissingVariable(variable))?;
+                        (0..monomial.exponent(variable)).try_fold(term, |term, _| {
+                            term.try_mul(value)
+                                .map_err(PolynomialEvaluationError::Arithmetic)
+                        })
+                    },
+                )?;
+                sum.try_add(&term)
+                    .map_err(PolynomialEvaluationError::Arithmetic)
+            },
+        )
     }
 }
 
