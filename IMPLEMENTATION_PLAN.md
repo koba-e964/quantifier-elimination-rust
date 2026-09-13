@@ -140,17 +140,17 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Add regression coverage for an even-multiplicity algebraic root.
 - [x] Commit this root-sample hardening substep as `3bac0a0`.
 
-## Step 9e: No-real-root algebraic coverage
-
-- [x] Cover a positive algebraic constant with no real quadratic roots.
-- [x] Preserve the exact empty-root result.
-- [x] Commit this root-isolation coverage substep as `273e7ce`.
-
 ## Step 9d: Arbitrary-degree algebraic root coverage
 
 - [x] Cover quadratic root isolation with an algebraic constant term.
 - [x] Validate both real roots of `y² - √2`.
 - [x] Commit this root-isolation coverage substep as `dd10136`.
+
+## Step 9e: No-real-root algebraic coverage
+
+- [x] Cover a positive algebraic constant with no real quadratic roots.
+- [x] Preserve the exact empty-root result.
+- [x] Commit this root-isolation coverage substep as `2fb96b6`.
 
 ## Validation required for each completed logical step
 
