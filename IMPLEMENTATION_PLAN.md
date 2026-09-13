@@ -212,7 +212,7 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Distribute universal conjunctions branchwise.
 - [x] Dualize negated quantified bodies exactly.
 - [x] Add compound multivariate regression coverage.
-- [ ] Commit this higher-dimensional QE substep.
+- [x] Commit this higher-dimensional QE substep as `8734b19`.
 
 ## Validation required for each completed logical step
 
