@@ -225,6 +225,13 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Align public dispatch documentation with the supported multivariate cases.
 - [x] Commit this documentation substep as `3f94333`.
 
+## Step 11d: Independent guard factoring
+
+- [x] Factor independent conjunction guards from existential quantifiers.
+- [x] Factor independent disjunction guards from universal quantifiers.
+- [x] Add multivariate semantic coverage for both factoring rules.
+- [ ] Commit this higher-dimensional QE substep.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`

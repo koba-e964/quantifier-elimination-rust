@@ -145,6 +145,30 @@ fn eliminate_supported_boolean_branches(
                 .collect::<Result<Vec<_>, _>>()
                 .map(Formula::And),
         ),
+        (Quantifier::Exists, Formula::And(branches)) => {
+            let (independent, dependent): (Vec<_>, Vec<_>) = branches
+                .iter()
+                .cloned()
+                .partition(|branch| !branch.free_variables().contains(&variable));
+            if independent.is_empty() || dependent.is_empty() {
+                return None;
+            }
+            let guard = simplify(&Formula::And(independent));
+            let quantified = Formula::exists(variable, simplify(&Formula::And(dependent)));
+            Some(eliminate_recursive(&quantified).map(|result| Formula::And(vec![guard, result])))
+        }
+        (Quantifier::Forall, Formula::Or(branches)) => {
+            let (independent, dependent): (Vec<_>, Vec<_>) = branches
+                .iter()
+                .cloned()
+                .partition(|branch| !branch.free_variables().contains(&variable));
+            if independent.is_empty() || dependent.is_empty() {
+                return None;
+            }
+            let guard = simplify(&Formula::Or(independent));
+            let quantified = Formula::forall(variable, simplify(&Formula::Or(dependent)));
+            Some(eliminate_recursive(&quantified).map(|result| Formula::Or(vec![guard, result])))
+        }
         (Quantifier::Exists, Formula::Not(inner)) => Some(
             eliminate_recursive(&Formula::forall(variable, inner.as_ref().clone()))
                 .map(|result| Formula::Not(Box::new(result))),

@@ -540,3 +540,35 @@ fn composes_branch_distribution_across_nested_quantifiers() {
     values.insert(2, BigRational::from_integer(3.into()));
     assert_eq!(eliminated.evaluate(&values), Some(true));
 }
+
+#[test]
+fn factors_variable_independent_guards_from_supported_compound_formulas() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let z = Polynomial::variable(2);
+    let existential = Formula::exists(
+        1,
+        Formula::And(vec![
+            Formula::atom(x.clone() - z.clone(), Relation::Equal),
+            Formula::atom(y.clone() + x.clone(), Relation::Equal),
+        ]),
+    );
+    let universal = Formula::forall(
+        1,
+        Formula::Or(vec![
+            Formula::atom(x.clone() - z.clone(), Relation::Equal),
+            Formula::atom(y - x + z, Relation::Equal),
+        ]),
+    );
+
+    let existential_result = eliminate(&existential).unwrap();
+    let universal_result = eliminate(&universal).unwrap();
+    let mut values = BTreeMap::new();
+    values.insert(0, BigRational::from_integer(1.into()));
+    values.insert(2, BigRational::from_integer(1.into()));
+    assert_eq!(existential_result.evaluate(&values), Some(true));
+    assert_eq!(universal_result.evaluate(&values), Some(true));
+    values.insert(2, BigRational::from_integer(2.into()));
+    assert_eq!(existential_result.evaluate(&values), Some(false));
+    assert_eq!(universal_result.evaluate(&values), Some(false));
+}
