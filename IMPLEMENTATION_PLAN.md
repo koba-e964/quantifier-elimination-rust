@@ -253,6 +253,13 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Add negative-leading semantic coverage.
 - [x] Commit this higher-dimensional QE substep as `0e945ed`.
 
+## Step 12d: Negated substitution branches
+
+- [x] Normalize direct and negated linear branches for equality substitution.
+- [x] Preserve exact relation dualization during substitution.
+- [x] Add semantic coverage for a negated branch.
+- [ ] Commit this higher-dimensional QE substep.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`

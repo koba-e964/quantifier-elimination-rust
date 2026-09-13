@@ -170,9 +170,7 @@ fn eliminate_exists_linear_conjunction(formula: &Formula, variable: usize) -> Op
         return None;
     };
     let equality = branches.iter().find_map(|branch| {
-        let Formula::Atom(atom) = branch else {
-            return None;
-        };
+        let atom = atom_with_negated_relation(branch)?;
         if atom.relation != crate::formula::Relation::Equal || atom.polynomial.degree(variable) != 1
         {
             return None;
@@ -186,11 +184,9 @@ fn eliminate_exists_linear_conjunction(formula: &Formula, variable: usize) -> Op
     let (leading, equality_constant) = equality;
     let mut conditions = Vec::new();
     for branch in branches {
-        let Formula::Atom(atom) = branch else {
-            return None;
-        };
+        let atom = atom_with_negated_relation(branch)?;
         if atom.polynomial.degree(variable) == 0 {
-            conditions.push(branch.clone());
+            conditions.push(Formula::Atom(atom));
             continue;
         }
         if atom.polynomial.degree(variable) != 1 {
@@ -207,6 +203,20 @@ fn eliminate_exists_linear_conjunction(formula: &Formula, variable: usize) -> Op
         conditions.push(Formula::atom(substituted, relation));
     }
     Some(Formula::And(conditions))
+}
+
+fn atom_with_negated_relation(formula: &Formula) -> Option<Atom> {
+    match formula {
+        Formula::Atom(atom) => Some(atom.clone()),
+        Formula::Not(body) => match body.as_ref() {
+            Formula::Atom(atom) => Some(Atom::new(
+                atom.polynomial.clone(),
+                negate_relation(atom.relation),
+            )),
+            _ => None,
+        },
+        _ => None,
+    }
 }
 
 fn reverse_inequality(relation: crate::formula::Relation) -> crate::formula::Relation {

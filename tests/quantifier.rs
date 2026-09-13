@@ -632,3 +632,25 @@ fn substitutes_negative_constant_leading_linear_equalities() {
         assert_eq!(eliminated.evaluate(&values), Some(expected));
     }
 }
+
+#[test]
+fn substitutes_negated_linear_conjunction_branches() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let z = Polynomial::variable(2);
+    let formula = Formula::exists(
+        1,
+        Formula::And(vec![
+            Formula::atom(y.clone() - x.clone(), Relation::Equal),
+            Formula::Not(Box::new(Formula::atom(y - z, Relation::LessOrEqual))),
+        ]),
+    );
+    let eliminated = eliminate(&formula).unwrap();
+
+    let mut values = BTreeMap::new();
+    values.insert(0, BigRational::from_integer(2.into()));
+    values.insert(2, BigRational::from_integer(1.into()));
+    assert_eq!(eliminated.evaluate(&values), Some(true));
+    values.insert(2, BigRational::from_integer(2.into()));
+    assert_eq!(eliminated.evaluate(&values), Some(false));
+}
