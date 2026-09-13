@@ -97,11 +97,12 @@ logical step is completed as a unit; approval is requested before its commit.
 
 - [x] Define the initial textual grammar for variables, polynomials, relations, Boolean connectives, and quantifiers.
 - [x] Implement a parser with location-aware, user-facing errors.
-- [ ] Add a CLI binary that parses a formula and prints the eliminated result.
-- [ ] Support input from an argument and from standard input.
-- [x] Add parser unit tests; CLI integration tests remain in Step 8b.
-- [ ] Document examples and unsupported syntax.
-- [x] Parser foundation committed as `cad9bfa`; CLI remains for the next substep.
+- [x] Add a CLI binary that parses a formula and prints the eliminated result.
+- [x] Support input from an argument and from standard input.
+- [x] Add parser unit tests and CLI integration tests.
+- [x] Document examples and unsupported syntax.
+- [x] Parser foundation committed as `cad9bfa`; CLI and documentation follow in Steps 8b and 8c.
+- [x] Complete the parser/CLI task across commits `cad9bfa`, `e4b138f`, `b277013`, and `bf9af34`.
 
 ## Step 8b: CLI wrapper
 
