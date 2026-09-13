@@ -280,7 +280,7 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Preserve exact rational translation, scaling, comparison, and sign decisions.
 - [x] Carry algebraic root samples through lifted-cell exact evaluation when arithmetic is supported.
 - [x] Add regression coverage for exact root-sample arithmetic.
-- [ ] Commit this higher-dimensional CAD substep after the full validation pass.
+- [x] Commit this higher-dimensional CAD substep as `72577fa`.
 
 ## Validation required for each completed logical step
 
