@@ -300,7 +300,7 @@ logical step is completed as a unit; approval is requested before its commit.
 
 - [x] Deduplicate structurally identical conjunction and disjunction branches.
 - [x] Add regression coverage for duplicate synthesized branches.
-- [ ] Commit this higher-dimensional QE substep after the full validation pass.
+- [x] Commit this higher-dimensional QE substep as `8d73a78`.
 
 ## Validation required for each completed logical step
 
