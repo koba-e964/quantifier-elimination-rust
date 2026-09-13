@@ -274,6 +274,14 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Add conjunction and disjunction semantic coverage.
 - [x] Commit this higher-dimensional QE substep as `f3858ff`.
 
+## Step 13a: Exact recursive section values
+
+- [x] Represent algebraic-coefficient root samples as first-class exact values.
+- [x] Preserve exact rational translation, scaling, comparison, and sign decisions.
+- [x] Carry algebraic root samples through lifted-cell exact evaluation when arithmetic is supported.
+- [x] Add regression coverage for exact root-sample arithmetic.
+- [ ] Commit this higher-dimensional CAD substep after the full validation pass.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`

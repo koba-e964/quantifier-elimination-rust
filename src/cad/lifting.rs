@@ -64,14 +64,12 @@ impl TwoDimensionalLifting {
             .zip(&self.lifted_cells)
             .map(|(base, lifted)| {
                 let mut values = std::collections::BTreeMap::new();
-                if base.algebraic_root_sample.is_some() {
-                    return Err(FormulaEvaluationError::AlgebraicRootSampleUnsupported);
-                }
                 values.insert(variable_order[0], base.sample.clone());
                 lifted
                     .iter()
                     .map(|cell| {
                         if cell.algebraic_root_sample.is_some()
+                            || base.algebraic_root_sample.is_some()
                             || base
                                 .exact_sample
                                 .as_ref()
@@ -501,6 +499,9 @@ fn exact_to_algebraic(value: ExactReal) -> AlgebraicReal {
                 value + BigRational::from_integer(1.into()),
             ),
         ),
+        ExactReal::AlgebraicRoot(_) => {
+            panic!("an algebraic root sample cannot be converted to AlgebraicReal")
+        }
     }
 }
 
@@ -650,6 +651,11 @@ fn exact_value(
         .exact_sample
         .clone()
         .map(crate::algebra::coefficient::ExactReal::algebraic)
+        .or_else(|| {
+            cell.algebraic_root_sample
+                .clone()
+                .map(crate::algebra::coefficient::ExactReal::algebraic_root)
+        })
         .unwrap_or_else(|| crate::algebra::coefficient::ExactReal::rational(cell.sample.clone())))
 }
 

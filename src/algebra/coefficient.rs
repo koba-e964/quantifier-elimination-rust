@@ -18,6 +18,7 @@ pub enum ExactRealError {
 pub enum ExactReal {
     Rational(BigRational),
     Algebraic(AlgebraicReal),
+    AlgebraicRoot(Box<AlgebraicRootSample>),
 }
 
 impl ExactReal {
@@ -30,6 +31,10 @@ impl ExactReal {
             Some(rational) => Self::Rational(rational),
             None => Self::Algebraic(value),
         }
+    }
+
+    pub fn algebraic_root(value: AlgebraicRootSample) -> Self {
+        Self::AlgebraicRoot(Box::new(value))
     }
 
     pub fn is_zero(&self) -> bool {
@@ -47,6 +52,7 @@ impl ExactReal {
                 0 => Ordering::Equal,
                 _ => Ordering::Greater,
             },
+            Self::AlgebraicRoot(value) => value.compare_rational(&BigRational::zero()),
         }
     }
 
@@ -59,6 +65,12 @@ impl ExactReal {
             (Self::Rational(left), Self::Algebraic(right)) => {
                 Ok(Self::Algebraic(right.add_rational(left)))
             }
+            (Self::AlgebraicRoot(left), Self::Rational(right)) => {
+                left.add_rational(right).map(Self::algebraic_root)
+            }
+            (Self::Rational(left), Self::AlgebraicRoot(right)) => {
+                right.add_rational(left).map(Self::algebraic_root)
+            }
             (Self::Algebraic(left), Self::Algebraic(right)) => {
                 let negated = right.negated();
                 if left.compare(&negated) == Ordering::Equal {
@@ -68,6 +80,11 @@ impl ExactReal {
                         .map(Self::Algebraic)
                         .ok_or(ExactRealError::AlgebraicArithmeticNotImplemented)
                 }
+            }
+            (Self::AlgebraicRoot(_), Self::AlgebraicRoot(_))
+            | (Self::AlgebraicRoot(_), Self::Algebraic(_))
+            | (Self::Algebraic(_), Self::AlgebraicRoot(_)) => {
+                Err(ExactRealError::AlgebraicArithmeticNotImplemented)
             }
         }
     }
@@ -81,6 +98,12 @@ impl ExactReal {
             (Self::Rational(left), Self::Algebraic(right)) => {
                 Ok(Self::Algebraic(right.negated().add_rational(left)))
             }
+            (Self::AlgebraicRoot(left), Self::Rational(right)) => {
+                left.add_rational(&-right).map(Self::algebraic_root)
+            }
+            (Self::Rational(left), Self::AlgebraicRoot(right)) => {
+                right.negated().add_rational(left).map(Self::algebraic_root)
+            }
             (Self::Algebraic(left), Self::Algebraic(right))
                 if left.compare(right) == Ordering::Equal =>
             {
@@ -90,6 +113,11 @@ impl ExactReal {
                 .add_algebraic(&right.negated())
                 .map(Self::Algebraic)
                 .ok_or(ExactRealError::AlgebraicArithmeticNotImplemented),
+            (Self::AlgebraicRoot(_), Self::AlgebraicRoot(_))
+            | (Self::AlgebraicRoot(_), Self::Algebraic(_))
+            | (Self::Algebraic(_), Self::AlgebraicRoot(_)) => {
+                Err(ExactRealError::AlgebraicArithmeticNotImplemented)
+            }
         }
     }
 
@@ -104,10 +132,21 @@ impl ExactReal {
                 Some(value) => Ok(Self::Algebraic(value)),
                 None => Ok(Self::Rational(BigRational::zero())),
             },
+            (Self::AlgebraicRoot(left), Self::Rational(right)) => {
+                left.mul_rational(right).map(Self::algebraic_root)
+            }
+            (Self::Rational(left), Self::AlgebraicRoot(right)) => {
+                right.mul_rational(left).map(Self::algebraic_root)
+            }
             (Self::Algebraic(left), Self::Algebraic(right)) => left
                 .mul_algebraic(right)
                 .map(Self::Algebraic)
                 .ok_or(ExactRealError::AlgebraicArithmeticNotImplemented),
+            (Self::AlgebraicRoot(_), Self::AlgebraicRoot(_))
+            | (Self::AlgebraicRoot(_), Self::Algebraic(_))
+            | (Self::Algebraic(_), Self::AlgebraicRoot(_)) => {
+                Err(ExactRealError::AlgebraicArithmeticNotImplemented)
+            }
         }
     }
 
@@ -115,16 +154,18 @@ impl ExactReal {
         match self {
             Self::Rational(value) => Self::Rational(-value),
             Self::Algebraic(value) => Self::Algebraic(value.negated()),
+            Self::AlgebraicRoot(value) => Self::AlgebraicRoot(Box::new(value.negated())),
         }
     }
 
-    pub fn try_mul_rational(&self, value: &BigRational) -> Self {
+    pub fn try_mul_rational(&self, value: &BigRational) -> Result<Self, ExactRealError> {
         match self {
-            Self::Rational(left) => Self::Rational(left * value),
+            Self::Rational(left) => Ok(Self::Rational(left * value)),
             Self::Algebraic(left) => match left.mul_rational(value) {
-                Some(result) => Self::Algebraic(result),
-                None => Self::Rational(BigRational::zero()),
+                Some(result) => Ok(Self::Algebraic(result)),
+                None => Ok(Self::Rational(BigRational::zero())),
             },
+            Self::AlgebraicRoot(left) => left.mul_rational(value).map(Self::algebraic_root),
         }
     }
 
@@ -136,6 +177,17 @@ impl ExactReal {
                 right.compare_rational(left).reverse()
             }
             (Self::Algebraic(left), Self::Algebraic(right)) => left.compare(right),
+            (Self::AlgebraicRoot(left), Self::Rational(right)) => left.compare_rational(right),
+            (Self::Rational(left), Self::AlgebraicRoot(right)) => {
+                right.compare_rational(left).reverse()
+            }
+            (Self::AlgebraicRoot(left), Self::AlgebraicRoot(right)) => left
+                .compare_exact(right)
+                .expect("algebraic root samples must be comparable exactly"),
+            (Self::AlgebraicRoot(_), Self::Algebraic(_))
+            | (Self::Algebraic(_), Self::AlgebraicRoot(_)) => {
+                panic!("mixed algebraic root samples are not comparable")
+            }
         }
     }
 }
@@ -165,6 +217,93 @@ impl AlgebraicRootSample {
 
     pub fn interval(&self) -> &RootInterval {
         &self.interval
+    }
+
+    pub fn compare_rational(&self, value: &BigRational) -> Ordering {
+        self.try_compare_rational(value)
+            .expect("algebraic root sample must be comparable to a rational")
+    }
+
+    pub fn try_compare_rational(&self, value: &BigRational) -> Result<Ordering, ExactRealError> {
+        let mut sample = self.clone();
+        for _ in 0..256 {
+            if sample.interval.upper < *value {
+                return Ok(Ordering::Less);
+            }
+            if sample.interval.lower > *value {
+                return Ok(Ordering::Greater);
+            }
+            if sample
+                .polynomial
+                .evaluate(&ExactReal::rational(value.clone()))
+                .is_ok_and(|result| result.is_zero())
+            {
+                return Ok(Ordering::Equal);
+            }
+            let width = sample.interval.width() / BigInt::from(2);
+            if let Ok(refined) = sample.refine(&width) {
+                sample = refined;
+            } else {
+                break;
+            }
+        }
+        Err(ExactRealError::AlgebraicRootSampleComparisonUndecidable)
+    }
+
+    pub fn add_rational(&self, value: &BigRational) -> Result<Self, ExactRealError> {
+        let degree = self
+            .polynomial
+            .degree()
+            .ok_or(ExactRealError::InvalidAlgebraicRootSample)?;
+        let mut coefficients = vec![ExactReal::rational(BigRational::zero()); degree + 1];
+        for k in 0..=degree {
+            for (j, coefficient) in coefficients.iter_mut().enumerate().take(k + 1) {
+                let factor = binomial_rational(k, j) * (-value).pow((k - j) as i32);
+                let term = self.polynomial.coefficient(k).try_mul_rational(&factor)?;
+                *coefficient = coefficient.try_add(&term)?;
+            }
+        }
+        Ok(Self::new(
+            AlgebraicPolynomial::new(coefficients),
+            RootInterval::new(&self.interval.lower + value, &self.interval.upper + value),
+        ))
+    }
+
+    pub fn mul_rational(&self, value: &BigRational) -> Result<Self, ExactRealError> {
+        if value.is_zero() {
+            return Ok(Self::new(
+                AlgebraicPolynomial::new(vec![
+                    ExactReal::rational(BigRational::zero()),
+                    ExactReal::rational(BigRational::from_integer(1.into())),
+                ]),
+                RootInterval::new(
+                    -BigRational::from_integer(1.into()),
+                    BigRational::from_integer(1.into()),
+                ),
+            ));
+        }
+        let degree = self
+            .polynomial
+            .degree()
+            .ok_or(ExactRealError::InvalidAlgebraicRootSample)?;
+        let coefficients = (0..=degree)
+            .map(|index| {
+                self.polynomial
+                    .coefficient(index)
+                    .try_mul_rational(&value.pow((degree - index) as i32))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let lower = &self.interval.lower * value;
+        let upper = &self.interval.upper * value;
+        Ok(Self::new(
+            AlgebraicPolynomial::new(coefficients),
+            RootInterval::new(lower.clone().min(upper.clone()), lower.max(upper)),
+        ))
+    }
+
+    pub fn negated(&self) -> Self {
+        self.mul_rational(&-BigRational::from_integer(1.into()))
+            .expect("negating an algebraic root sample is exact")
     }
 
     pub fn refine(&self, maximum_width: &BigRational) -> Result<Self, ExactRealError> {
@@ -347,6 +486,9 @@ impl AlgebraicPolynomial {
                     .mul_rational(&(BigRational::from_integer(1.into()) / leading))
                     .expect("nonzero leading coefficient"),
             ),
+            ExactReal::AlgebraicRoot(_) => {
+                return Err(ExactRealError::AlgebraicArithmeticNotImplemented)
+            }
         }))
     }
 
@@ -382,11 +524,11 @@ impl AlgebraicPolynomial {
         let leading = abs_exact(&self.coefficient(degree));
         let mut radius = BigRational::from_integer(1.into());
         loop {
-            let lhs = leading.try_mul_rational(&radius.pow(degree as i32));
+            let lhs = leading.try_mul_rational(&radius.pow(degree as i32))?;
             let mut rhs = ExactReal::rational(BigRational::zero());
             for index in 0..degree {
-                let term =
-                    abs_exact(&self.coefficient(index)).try_mul_rational(&radius.pow(index as i32));
+                let term = abs_exact(&self.coefficient(index))
+                    .try_mul_rational(&radius.pow(index as i32))?;
                 rhs = rhs.try_add(&term)?;
             }
             if lhs.compare(&rhs) == Ordering::Greater {
@@ -401,7 +543,7 @@ impl AlgebraicPolynomial {
             .iter()
             .map(|coefficient| match coefficient {
                 ExactReal::Rational(value) => Some(value.clone()),
-                ExactReal::Algebraic(_) => None,
+                ExactReal::Algebraic(_) | ExactReal::AlgebraicRoot(_) => None,
             })
             .collect::<Option<Vec<_>>>()
             .map(UnivariatePolynomial::new)
@@ -442,6 +584,7 @@ fn repeated_quadratic_root_interval(
             &value + BigRational::from_integer(1.into()),
         ),
         ExactReal::Algebraic(value) => value.interval,
+        ExactReal::AlgebraicRoot(_) => return Ok(None),
     }))
 }
 
@@ -451,6 +594,15 @@ fn abs_exact(value: &ExactReal) -> ExactReal {
     } else {
         value.clone()
     }
+}
+
+fn binomial_rational(n: usize, k: usize) -> BigRational {
+    let mut result = BigInt::from(1);
+    for index in 0..k {
+        result *= BigInt::from((n - index) as u64);
+        result /= BigInt::from((index + 1) as u64);
+    }
+    BigRational::from_integer(result)
 }
 
 fn isolate_bernstein(
@@ -595,7 +747,7 @@ fn bernstein_coefficients(
             let factor = BigRational::from_integer(binomial(k, index).into())
                 / BigRational::from_integer(binomial(degree, index).into());
             coefficient =
-                coefficient.try_add(&power.coefficient(index).try_mul_rational(&factor))?;
+                coefficient.try_add(&power.coefficient(index).try_mul_rational(&factor)?)?;
         }
         result.push(coefficient);
     }

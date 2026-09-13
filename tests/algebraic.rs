@@ -373,6 +373,25 @@ fn performs_exact_algebraic_algebraic_arithmetic() {
 }
 
 #[test]
+fn carries_algebraic_coefficient_root_samples_as_exact_values() {
+    let polynomial = AlgebraicPolynomial::new(vec![
+        ExactReal::rational(BigRational::from_integer((-2).into())),
+        ExactReal::rational(BigRational::zero()),
+        ExactReal::rational(BigRational::from_integer(1.into())),
+    ]);
+    let mut roots = polynomial.isolate_real_roots().unwrap();
+    roots.sort_by(|left, right| left.lower.cmp(&right.lower));
+    let sample = AlgebraicRootSample::new(polynomial.clone(), roots.pop().unwrap());
+    let root = ExactReal::algebraic_root(sample);
+    let one = ExactReal::rational(BigRational::from_integer(1.into()));
+    let two = ExactReal::rational(BigRational::from_integer(2.into()));
+
+    assert_eq!(root.compare(&one), Ordering::Greater);
+    assert_eq!(root.try_add(&one).unwrap().compare(&two), Ordering::Greater);
+    assert_eq!(root.try_mul(&two).unwrap().compare(&two), Ordering::Greater);
+}
+
+#[test]
 fn normalizes_algebraic_definitions_and_collapses_rational_roots() {
     let repeated_definition =
         quantifier_elimination::UnivariatePolynomial::from_integers(&[4, -8, 4]);
