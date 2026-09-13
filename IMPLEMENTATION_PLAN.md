@@ -171,7 +171,7 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Cover recursive elimination across two quantified variables.
 - [x] Cover existential/universal nesting that reduces to true.
 - [x] Cover universal/existential nesting that reduces to false.
-- [ ] Commit this higher-dimensional QE substep.
+- [x] Commit this higher-dimensional QE substep as `73368d5`.
 
 ## Validation required for each completed logical step
 
