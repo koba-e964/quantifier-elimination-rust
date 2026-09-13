@@ -246,6 +246,13 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Add a multivariate regression test.
 - [x] Commit this higher-dimensional QE substep as `c1a7a5c`.
 
+## Step 12c: Signed linear equality substitution
+
+- [x] Accept nonzero constant leading coefficients of either sign.
+- [x] Reverse strict and non-strict inequalities when the coefficient is negative.
+- [x] Add negative-leading semantic coverage.
+- [ ] Commit this higher-dimensional QE substep.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`

@@ -610,3 +610,25 @@ fn rejects_universal_conjunctions_with_linear_equalities() {
 
     assert_eq!(eliminate(&formula).unwrap(), Formula::False);
 }
+
+#[test]
+fn substitutes_negative_constant_leading_linear_equalities() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let z = Polynomial::variable(2);
+    let formula = Formula::exists(
+        1,
+        Formula::And(vec![
+            Formula::atom(x.clone() + z.clone() - y.clone(), Relation::Equal),
+            Formula::atom(y - x, Relation::Greater),
+        ]),
+    );
+    let eliminated = eliminate(&formula).unwrap();
+
+    for (z_value, expected) in [(-1, false), (0, false), (1, true)] {
+        let mut values = BTreeMap::new();
+        values.insert(0, BigRational::from_integer(2.into()));
+        values.insert(2, BigRational::from_integer(z_value.into()));
+        assert_eq!(eliminated.evaluate(&values), Some(expected));
+    }
+}

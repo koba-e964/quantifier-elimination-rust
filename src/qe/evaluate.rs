@@ -150,9 +150,7 @@ fn eliminate_forall_linear_equality(formula: &Formula, variable: usize) -> Optio
             return None;
         }
         let leading = atom.polynomial.coefficient_in(variable, 1);
-        if leading.variables().next().is_some()
-            || !leading.evaluate(&Default::default()).is_positive()
-        {
+        if leading.variables().next().is_some() || leading.is_zero() {
             return None;
         }
         Some(Formula::False)
@@ -180,9 +178,7 @@ fn eliminate_exists_linear_conjunction(formula: &Formula, variable: usize) -> Op
             return None;
         }
         let leading = atom.polynomial.coefficient_in(variable, 1);
-        if leading.variables().next().is_some()
-            || !leading.evaluate(&Default::default()).is_positive()
-        {
+        if leading.variables().next().is_some() || leading.is_zero() {
             return None;
         }
         Some((leading, atom.polynomial.coefficient_in(variable, 0)))
@@ -203,9 +199,24 @@ fn eliminate_exists_linear_conjunction(formula: &Formula, variable: usize) -> Op
         let coefficient = atom.polynomial.coefficient_in(variable, 1);
         let constant = atom.polynomial.coefficient_in(variable, 0);
         let substituted = leading.clone() * constant - coefficient * equality_constant.clone();
-        conditions.push(Formula::atom(substituted, atom.relation));
+        let relation = if leading.evaluate(&Default::default()).is_positive() {
+            atom.relation
+        } else {
+            reverse_inequality(atom.relation)
+        };
+        conditions.push(Formula::atom(substituted, relation));
     }
     Some(Formula::And(conditions))
+}
+
+fn reverse_inequality(relation: crate::formula::Relation) -> crate::formula::Relation {
+    match relation {
+        crate::formula::Relation::Less => crate::formula::Relation::Greater,
+        crate::formula::Relation::LessOrEqual => crate::formula::Relation::GreaterOrEqual,
+        crate::formula::Relation::Greater => crate::formula::Relation::Less,
+        crate::formula::Relation::GreaterOrEqual => crate::formula::Relation::LessOrEqual,
+        relation => relation,
+    }
 }
 
 fn eliminate_supported_boolean_branches(
