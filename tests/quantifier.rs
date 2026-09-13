@@ -418,3 +418,49 @@ fn eliminates_linear_atomic_formulas_with_multiple_free_variables() {
         assert_eq!(eliminated.evaluate(&values), Some(expected));
     }
 }
+
+#[test]
+fn covers_all_linear_relation_quantifiers_with_multiple_free_variables() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let z = Polynomial::variable(2);
+    let relations = [
+        Relation::Equal,
+        Relation::NotEqual,
+        Relation::Less,
+        Relation::LessOrEqual,
+        Relation::Greater,
+        Relation::GreaterOrEqual,
+    ];
+
+    for relation in relations {
+        let polynomial = (x.clone() + z.clone()) * y.clone() + x.clone() - z.clone();
+        let existential = eliminate(&Formula::exists(
+            1,
+            Formula::atom(polynomial.clone(), relation),
+        ))
+        .unwrap();
+        let universal =
+            eliminate(&Formula::forall(1, Formula::atom(polynomial, relation))).unwrap();
+
+        let mut nonzero_leading = BTreeMap::new();
+        nonzero_leading.insert(0, BigRational::from_integer(1.into()));
+        nonzero_leading.insert(2, BigRational::from_integer(0.into()));
+        assert_eq!(existential.evaluate(&nonzero_leading), Some(true));
+        assert_eq!(universal.evaluate(&nonzero_leading), Some(false));
+
+        let mut zero_leading = BTreeMap::new();
+        zero_leading.insert(0, BigRational::from_integer(1.into()));
+        zero_leading.insert(2, BigRational::from_integer((-1).into()));
+        let expected = match relation {
+            Relation::Equal => false,
+            Relation::NotEqual => true,
+            Relation::Less => false,
+            Relation::LessOrEqual => false,
+            Relation::Greater => true,
+            Relation::GreaterOrEqual => true,
+        };
+        assert_eq!(existential.evaluate(&zero_leading), Some(expected));
+        assert_eq!(universal.evaluate(&zero_leading), Some(expected));
+    }
+}

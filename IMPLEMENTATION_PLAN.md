@@ -180,6 +180,13 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Add semantic coverage with two remaining free variables.
 - [x] Commit this higher-dimensional QE substep as `2b8ca09`.
 
+## Step 10e: Linear relation-matrix regression coverage
+
+- [x] Cover all six relations for existential linear elimination.
+- [x] Cover all six relations for universal linear elimination.
+- [x] Verify zero and nonzero leading-coefficient cases semantically.
+- [ ] Commit this higher-dimensional QE substep.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`
