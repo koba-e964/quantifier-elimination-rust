@@ -200,6 +200,41 @@ fn recursively_eliminates_nested_quantifiers() {
 }
 
 #[test]
+fn preserves_shadowed_variable_scopes_during_nested_elimination() {
+    let shadowed = Formula::exists(
+        0,
+        Formula::forall(
+            0,
+            Formula::atom(
+                Polynomial::variable(0) * Polynomial::variable(0),
+                Relation::GreaterOrEqual,
+            ),
+        ),
+    );
+
+    assert_eq!(eliminate(&shadowed).unwrap(), Formula::True);
+}
+
+#[test]
+fn reduces_quantified_boolean_branches_before_the_outer_quantifier() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let z = Polynomial::variable(2);
+    let body = Formula::And(vec![
+        Formula::forall(
+            1,
+            Formula::atom(
+                x.clone() * x.clone() + y.clone() * y,
+                Relation::GreaterOrEqual,
+            ),
+        ),
+        Formula::exists(2, Formula::atom(z - x, Relation::Equal)),
+    ]);
+
+    assert_eq!(eliminate(&Formula::exists(0, body)).unwrap(), Formula::True);
+}
+
+#[test]
 fn eliminates_boolean_combinations_and_strict_inequalities() {
     let x = Polynomial::variable(0);
     let y = Polynomial::variable(1);
