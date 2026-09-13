@@ -218,7 +218,7 @@ logical step is completed as a unit; approval is requested before its commit.
 
 - [x] Compose supported Boolean distribution across two quantified variables.
 - [x] Add a nested existential regression with one remaining free variable.
-- [ ] Commit this higher-dimensional QE substep.
+- [x] Commit this higher-dimensional QE substep as `9c26d5a`.
 
 ## Validation required for each completed logical step
 
