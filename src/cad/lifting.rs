@@ -536,10 +536,74 @@ pub fn evaluate_formula_at_exact_lifted_cell(
     base_cell: &UnivariateCell,
     lifted_cell: &UnivariateCell,
 ) -> Result<bool, FormulaEvaluationError> {
+    if let Some(root) = &lifted_cell.algebraic_root_sample {
+        if base_cell.algebraic_root_sample.is_some() {
+            return Err(FormulaEvaluationError::AlgebraicRootSampleUnsupported);
+        }
+        return evaluate_formula_at_algebraic_root_lifted_cell(
+            formula,
+            base_variable,
+            lifted_variable,
+            &exact_value(base_cell)?,
+            root,
+        );
+    }
     let mut values = std::collections::BTreeMap::new();
     values.insert(base_variable, exact_value(base_cell)?);
     values.insert(lifted_variable, exact_value(lifted_cell)?);
     evaluate_formula_at_exact_values(formula, &values)
+}
+
+fn evaluate_formula_at_algebraic_root_lifted_cell(
+    formula: &Formula,
+    base_variable: Variable,
+    lifted_variable: Variable,
+    base_value: &crate::algebra::coefficient::ExactReal,
+    lifted_root: &AlgebraicRootSample,
+) -> Result<bool, FormulaEvaluationError> {
+    match formula {
+        Formula::True => Ok(true),
+        Formula::False => Ok(false),
+        Formula::Atom(atom) => {
+            let mut values = std::collections::BTreeMap::new();
+            values.insert(base_variable, base_value.clone());
+            let polynomial =
+                specialize_to_algebraic_univariate(&atom.polynomial, lifted_variable, &values)
+                    .map_err(|_| FormulaEvaluationError::AlgebraicRootSampleUnsupported)?;
+            let sign = lifted_root
+                .sign_of(&polynomial)
+                .map_err(|_| FormulaEvaluationError::AlgebraicRootSampleUnsupported)?;
+            Ok(relation_holds(sign, atom.relation))
+        }
+        Formula::Not(body) => Ok(!evaluate_formula_at_algebraic_root_lifted_cell(
+            body,
+            base_variable,
+            lifted_variable,
+            base_value,
+            lifted_root,
+        )?),
+        Formula::And(formulas) => formulas.iter().try_fold(true, |result, formula| {
+            Ok(result
+                && evaluate_formula_at_algebraic_root_lifted_cell(
+                    formula,
+                    base_variable,
+                    lifted_variable,
+                    base_value,
+                    lifted_root,
+                )?)
+        }),
+        Formula::Or(formulas) => formulas.iter().try_fold(false, |result, formula| {
+            Ok(result
+                || evaluate_formula_at_algebraic_root_lifted_cell(
+                    formula,
+                    base_variable,
+                    lifted_variable,
+                    base_value,
+                    lifted_root,
+                )?)
+        }),
+        Formula::Quantified { .. } => Err(FormulaEvaluationError::QuantifierNotSupported),
+    }
 }
 
 fn evaluate_formula_at_exact_values(
@@ -586,6 +650,17 @@ fn exact_value(
         .clone()
         .map(crate::algebra::coefficient::ExactReal::algebraic)
         .unwrap_or_else(|| crate::algebra::coefficient::ExactReal::rational(cell.sample.clone())))
+}
+
+fn relation_holds(sign: std::cmp::Ordering, relation: Relation) -> bool {
+    match relation {
+        Relation::Equal => sign == std::cmp::Ordering::Equal,
+        Relation::NotEqual => sign != std::cmp::Ordering::Equal,
+        Relation::Less => sign == std::cmp::Ordering::Less,
+        Relation::LessOrEqual => sign != std::cmp::Ordering::Greater,
+        Relation::Greater => sign == std::cmp::Ordering::Greater,
+        Relation::GreaterOrEqual => sign != std::cmp::Ordering::Less,
+    }
 }
 
 pub fn cell_condition(

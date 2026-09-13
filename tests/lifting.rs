@@ -5,7 +5,7 @@ use quantifier_elimination::algebra::univariate::UnivariatePolynomial;
 use quantifier_elimination::cad::lifting::{
     cell_condition, decompose_algebraic_univariate, decompose_univariate,
     evaluate_formula_at_exact_lifted_cell, lift_over_rational_sample, lift_two_variables,
-    synthesize_cell_conditions, CellKind, FormulaEvaluationError,
+    synthesize_cell_conditions, CellKind,
 };
 use quantifier_elimination::Polynomial;
 use quantifier_elimination::{Formula, Relation};
@@ -50,7 +50,7 @@ fn evaluates_formulas_at_algebraic_lifted_samples() {
 }
 
 #[test]
-fn rejects_midpoint_fallback_for_algebraic_root_samples() {
+fn evaluates_relations_at_supported_algebraic_root_sections() {
     let polynomial = AlgebraicPolynomial::new(vec![
         ExactReal::rational(BigRational::from_integer((-2).into())),
         ExactReal::rational(BigRational::zero()),
@@ -59,14 +59,30 @@ fn rejects_midpoint_fallback_for_algebraic_root_samples() {
     let lifted_cells = decompose_algebraic_univariate(&[polynomial]).unwrap();
     let lifted_section = lifted_cells
         .iter()
-        .find(|cell| cell.algebraic_root_sample.is_some())
+        .find(|cell| cell.algebraic_root_sample.is_some() && cell.sample > BigRational::zero())
         .unwrap();
     let base_cell = &decompose_univariate(&[])[0];
+    let y = Polynomial::variable(1);
 
-    assert_eq!(
-        evaluate_formula_at_exact_lifted_cell(&Formula::True, 0, 1, base_cell, lifted_section,),
-        Err(FormulaEvaluationError::AlgebraicRootSampleUnsupported)
-    );
+    assert!(evaluate_formula_at_exact_lifted_cell(
+        &Formula::atom(
+            y.clone() * y.clone() - Polynomial::integer(2),
+            Relation::Equal
+        ),
+        0,
+        1,
+        base_cell,
+        lifted_section,
+    )
+    .unwrap());
+    assert!(evaluate_formula_at_exact_lifted_cell(
+        &Formula::atom(y, Relation::Greater),
+        0,
+        1,
+        base_cell,
+        lifted_section,
+    )
+    .unwrap());
 }
 
 #[test]
