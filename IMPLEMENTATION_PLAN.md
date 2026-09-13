@@ -251,7 +251,7 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Accept nonzero constant leading coefficients of either sign.
 - [x] Reverse strict and non-strict inequalities when the coefficient is negative.
 - [x] Add negative-leading semantic coverage.
-- [ ] Commit this higher-dimensional QE substep.
+- [x] Commit this higher-dimensional QE substep as `0e945ed`.
 
 ## Validation required for each completed logical step
 
