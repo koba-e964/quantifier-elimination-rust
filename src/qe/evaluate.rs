@@ -1,8 +1,8 @@
 use crate::algebra::univariate::UnivariatePolynomial;
-use crate::cad::lifting::lift_two_variables;
 use crate::cad::lifting::{
     decompose_univariate, synthesize_cell_conditions, FormulaEvaluationError, LiftingError,
 };
+use crate::cad::lifting::{lift_recursive, lift_two_variables};
 use crate::cad::projection::ProjectionError;
 use crate::formula::{Atom, Formula, Quantifier};
 use crate::polynomial::Monomial;
@@ -104,7 +104,7 @@ fn eliminate_recursive(formula: &Formula) -> Result<Formula, QuantifierEvaluatio
     let reduced = Formula::Quantified {
         quantifier: *quantifier,
         variable: *variable,
-        body: Box::new(body),
+        body: Box::new(body.clone()),
     };
     if let Some(eliminated) = eliminate_forall_linear_equality(&reduced, *variable) {
         return Ok(eliminated);
@@ -131,7 +131,13 @@ fn eliminate_recursive(formula: &Formula) -> Result<Formula, QuantifierEvaluatio
     } else if free_variables.len() == 1 {
         eliminate_one_variable(&reduced, *free_variables.first().unwrap(), *variable)
     } else {
-        Err(QuantifierEvaluationError::WrongVariable)
+        let mut variable_order = free_variables.iter().copied().collect::<Vec<_>>();
+        variable_order.push(*variable);
+        let lifting = lift_recursive(&reduced, &variable_order)?;
+        lifting
+            .synthesize_quantifier(&body, *quantifier, *variable)
+            .map(|result| simplify(&result))
+            .map_err(QuantifierEvaluationError::from)
     }
 }
 

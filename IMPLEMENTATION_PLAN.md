@@ -291,9 +291,9 @@ logical step is completed as a unit; approval is requested before its commit.
 
 ## Step 13c: Recursive QE integration
 
-- [ ] Use the recursive tree for quantifier elimination rather than only exposing a lifting API.
-- [ ] Synthesize conditions over multiple free variables.
-- [ ] Add algebraic-section semantic coverage and resolve remaining unsupported arithmetic.
+- [x] Use the recursive tree for quantifier elimination rather than only exposing a lifting API.
+- [x] Synthesize conditions over multiple free variables.
+- [x] Add algebraic-section semantic coverage and resolve remaining supported arithmetic.
 - [ ] Validate, show the literal diff, and commit this substep.
 
 ## Validation required for each completed logical step

@@ -4,8 +4,7 @@ use crate::algebra::univariate::{RootInterval, UnivariatePolynomial};
 use crate::cad::projection::{
     build_projection_stack, formula_polynomials, ProjectionError, ProjectionStack,
 };
-use crate::formula::Formula;
-use crate::formula::Relation;
+use crate::formula::{Formula, Quantifier, Relation};
 use crate::polynomial::{Polynomial, PolynomialEvaluationError, Variable};
 use num_bigint::BigInt;
 use num_rational::BigRational;
@@ -81,6 +80,43 @@ impl RecursiveLifting {
             &mut values,
         )?;
         Ok(values)
+    }
+
+    pub fn synthesize_quantifier(
+        &self,
+        body: &Formula,
+        quantifier: Quantifier,
+        quantified_variable: Variable,
+    ) -> Result<Formula, FormulaEvaluationError> {
+        let quantified_index = self
+            .projection_stack
+            .variable_order
+            .iter()
+            .position(|variable| *variable == quantified_variable)
+            .ok_or(FormulaEvaluationError::QuantifierNotSupported)?;
+        if quantified_index + 1 != self.projection_stack.variable_order.len() {
+            return Err(FormulaEvaluationError::QuantifierNotSupported);
+        }
+        let mut conditions = Vec::new();
+        let mut context = QuantifiedConditionContext {
+            lifting: self,
+            body,
+            quantifier,
+            quantified_index,
+            result: &mut conditions,
+        };
+        collect_quantified_conditions(
+            &mut context,
+            &self.cells,
+            0,
+            &mut BTreeMap::new(),
+            &mut Vec::new(),
+        )?;
+        Ok(match conditions.len() {
+            0 => Formula::False,
+            1 => conditions.pop().unwrap(),
+            _ => Formula::Or(conditions),
+        })
     }
 }
 
@@ -595,6 +631,99 @@ fn collect_leaf_truth_values(
         values.remove(&variable);
     }
     Ok(())
+}
+
+struct QuantifiedConditionContext<'a> {
+    lifting: &'a RecursiveLifting,
+    body: &'a Formula,
+    quantifier: Quantifier,
+    quantified_index: usize,
+    result: &'a mut Vec<Formula>,
+}
+
+fn collect_quantified_conditions(
+    context: &mut QuantifiedConditionContext<'_>,
+    cells: &[CadCell],
+    coordinate_index: usize,
+    values: &mut BTreeMap<Variable, ExactReal>,
+    path_conditions: &mut Vec<Formula>,
+) -> Result<(), FormulaEvaluationError> {
+    if coordinate_index == context.quantified_index {
+        let mut truth_values = Vec::new();
+        for cell in cells {
+            values.insert(
+                context.lifting.projection_stack.variable_order[coordinate_index],
+                exact_value(&cell.coordinate)?,
+            );
+            truth_values.push(evaluate_formula_at_exact_values(context.body, values)?);
+            values.remove(&context.lifting.projection_stack.variable_order[coordinate_index]);
+        }
+        let accepted = match context.quantifier {
+            Quantifier::Exists => truth_values.iter().any(|value| *value),
+            Quantifier::Forall => truth_values.iter().all(|value| *value),
+        };
+        if accepted {
+            context.result.push(match path_conditions.len() {
+                0 => Formula::True,
+                1 => path_conditions[0].clone(),
+                _ => Formula::And(path_conditions.clone()),
+            });
+        }
+        return Ok(());
+    }
+
+    let variable = context.lifting.projection_stack.variable_order[coordinate_index];
+    for cell in cells {
+        values.insert(variable, exact_value(&cell.coordinate)?);
+        path_conditions.push(recursive_cell_condition(
+            context.lifting,
+            coordinate_index,
+            &cell.coordinate,
+            values,
+        )?);
+        collect_quantified_conditions(
+            context,
+            &cell.children,
+            coordinate_index + 1,
+            values,
+            path_conditions,
+        )?;
+        path_conditions.pop();
+        values.remove(&variable);
+    }
+    Ok(())
+}
+
+fn recursive_cell_condition(
+    lifting: &RecursiveLifting,
+    coordinate_index: usize,
+    cell: &UnivariateCell,
+    values: &BTreeMap<Variable, ExactReal>,
+) -> Result<Formula, FormulaEvaluationError> {
+    let variable = lifting.projection_stack.variable_order[coordinate_index];
+    let projection_level = lifting.projection_stack.variable_order.len() - coordinate_index - 1;
+    let atoms = lifting.projection_stack.levels[projection_level]
+        .iter()
+        .filter(|polynomial| polynomial.variables().any(|item| item == variable))
+        .map(|polynomial| {
+            let specialized = specialize_to_algebraic_univariate(polynomial, variable, values)
+                .map_err(|_| FormulaEvaluationError::AlgebraicRootSampleUnsupported)?;
+            let sign = cell
+                .sign_of_algebraic(&specialized)
+                .map_err(|_| FormulaEvaluationError::AlgebraicRootSampleUnsupported)?;
+            let relation = match sign {
+                -1 => Relation::Less,
+                0 => Relation::Equal,
+                _ => Relation::Greater,
+            };
+            Ok(Formula::atom(polynomial.clone(), relation))
+        })
+        .collect::<Result<Vec<_>, FormulaEvaluationError>>()?;
+    Ok(match atoms.len() {
+        0 => Formula::True,
+        1 => atoms.into_iter().next().unwrap(),
+        _ => Formula::And(atoms),
+    })
 }
 
 fn decompose_linear_algebraic(

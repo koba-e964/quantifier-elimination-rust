@@ -324,19 +324,47 @@ fn lifts_linear_polynomials_over_irrational_base_sections() {
 }
 
 #[test]
-fn reports_unsupported_elimination_shapes() {
+fn eliminates_nonlinear_formulas_with_multiple_free_variables() {
     let x = Polynomial::variable(0);
     let y = Polynomial::variable(1);
     let z = Polynomial::variable(2);
     let formula = Formula::exists(1, Formula::atom(y.clone() * y + x + z, Relation::Equal));
-    assert_eq!(
-        quantifier_elimination::eliminate(&formula),
-        Err(QuantifierEvaluationError::WrongVariable)
-    );
+    let eliminated = quantifier_elimination::eliminate(&formula).unwrap();
+    for (x_value, z_value, expected) in [(0, 0, true), (1, -2, true), (1, 0, false)] {
+        let mut values = BTreeMap::new();
+        values.insert(0, BigRational::from_integer(x_value.into()));
+        values.insert(2, BigRational::from_integer(z_value.into()));
+        assert_eq!(eliminated.evaluate(&values), Some(expected));
+    }
     assert_eq!(
         quantifier_elimination::eliminate(&Formula::True),
         Err(QuantifierEvaluationError::WrongVariable)
     );
+}
+
+#[test]
+fn synthesizes_multiple_free_conditions_over_an_algebraic_base_section() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let z = Polynomial::variable(2);
+    let formula = Formula::exists(
+        2,
+        Formula::And(vec![
+            Formula::atom(
+                x.clone() * x.clone() - Polynomial::integer(2),
+                Relation::LessOrEqual,
+            ),
+            Formula::atom(z.clone() * z + x * y, Relation::Equal),
+        ]),
+    );
+    let eliminated = quantifier_elimination::eliminate(&formula).unwrap();
+
+    for (x_value, y_value, expected) in [(0, 0, true), (2, 0, false), (0, 1, true)] {
+        let mut values = BTreeMap::new();
+        values.insert(0, BigRational::from_integer(x_value.into()));
+        values.insert(1, BigRational::from_integer(y_value.into()));
+        assert_eq!(eliminated.evaluate(&values), Some(expected));
+    }
 }
 
 #[test]
