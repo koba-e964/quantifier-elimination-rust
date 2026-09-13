@@ -244,7 +244,7 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Detect nonconstant linear equalities in universal conjunctions.
 - [x] Reduce those conjunctions to false exactly.
 - [x] Add a multivariate regression test.
-- [ ] Commit this higher-dimensional QE substep.
+- [x] Commit this higher-dimensional QE substep as `c1a7a5c`.
 
 ## Validation required for each completed logical step
 
