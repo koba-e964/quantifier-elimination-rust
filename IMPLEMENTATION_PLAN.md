@@ -193,6 +193,12 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Retain explicit documentation for unsupported nonlinear and compound cases.
 - [x] Commit this higher-dimensional QE substep as `372df97`.
 
+## Step 10g: Linear multivariate CLI regression
+
+- [x] Exercise parser, elimination, and CLI formatting together.
+- [x] Verify a linear quantified formula with two free variables.
+- [ ] Commit this higher-dimensional QE substep.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`

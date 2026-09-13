@@ -43,3 +43,15 @@ fn reports_parse_errors_with_a_nonzero_status() {
     assert_eq!(output.status.code(), Some(2));
     assert!(String::from_utf8_lossy(&output.stderr).contains("parse error"));
 }
+
+#[test]
+fn prints_linear_multivariate_elimination_results() {
+    let output = Command::new(env!("CARGO_BIN_EXE_qe"))
+        .arg("exists x1. x0*x1 + x2*x1 - 1 = 0")
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "x0 + x2 != 0\n");
+    assert!(output.stderr.is_empty());
+}
