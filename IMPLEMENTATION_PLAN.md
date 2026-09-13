@@ -178,7 +178,7 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Extract quantified-variable coefficients for linear atomic formulas.
 - [x] Eliminate all six relation kinds for existential and universal quantifiers.
 - [x] Add semantic coverage with two remaining free variables.
-- [ ] Commit this higher-dimensional QE substep.
+- [x] Commit this higher-dimensional QE substep as `2b8ca09`.
 
 ## Validation required for each completed logical step
 
