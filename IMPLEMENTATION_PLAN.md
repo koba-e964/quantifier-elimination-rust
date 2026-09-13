@@ -164,7 +164,7 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Normalize Boolean structure after recursively reducing nested quantifiers.
 - [x] Collapse dead quantified branches before free-variable counting.
 - [x] Add existential and universal multivariate regression coverage.
-- [ ] Commit this higher-dimensional QE substep.
+- [x] Commit this higher-dimensional QE substep as `d5f58c9`.
 
 ## Validation required for each completed logical step
 
