@@ -87,11 +87,11 @@ logical step is completed as a unit; approval is requested before its commit.
 
 ## Step 7: Quantifier elimination extensions
 
-- [ ] Support recursive lifting for multiple quantified variables.
-- [ ] Support nested quantifiers with correct variable ordering and alpha-renaming.
-- [ ] Generalize formula synthesis beyond one free variable.
-- [ ] Preserve Boolean structure and simplify synthesized formulas.
-- [ ] Add semantic validation over rational and algebraic assignments.
+- [x] Support recursive lifting for multiple quantified variables.
+- [x] Support nested quantifiers with correct variable ordering and alpha-renaming.
+- [x] Generalize formula synthesis beyond one free variable.
+- [x] Preserve Boolean structure and simplify synthesized formulas.
+- [x] Add semantic validation over rational assignments and exact algebraic CAD cells.
 
 ## Step 8: Parser and CLI
 
@@ -314,7 +314,7 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Audit remaining midpoint-derived fields and ensure none drive semantic decisions.
 - [x] Audit unsupported algebraic-root arithmetic paths for explicit errors, not false results.
 - [x] Update public scope documentation and add final semantic cases.
-- [ ] Run final validation, show the literal diff, commit all remaining work, and push.
+- [x] Run final validation, show the literal diff, commit all remaining work, and push.
 
 ## Validation required for each completed logical step
 
