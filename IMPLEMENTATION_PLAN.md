@@ -237,7 +237,7 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Detect a positive constant leading coefficient equality.
 - [x] Substitute its exact root into remaining linear atoms.
 - [x] Add multivariate semantic coverage for the substitution path.
-- [ ] Commit this higher-dimensional QE substep.
+- [x] Commit this higher-dimensional QE substep as `fa30775`.
 
 ## Validation required for each completed logical step
 
