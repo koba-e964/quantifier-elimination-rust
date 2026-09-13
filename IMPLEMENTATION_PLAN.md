@@ -78,6 +78,13 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Add a formula-shape regression test.
 - [x] Obtain approval and commit this Step 7d change as `b05abd2`.
 
+## Step 7e: Algebraic-assignment semantic validation
+
+- [x] Evaluate synthesized quantifier-free results on exact algebraic base cells.
+- [x] Cover both real roots and surrounding sectors.
+- [x] Add an end-to-end semantic regression test.
+- [x] Obtain approval and commit this Step 7e change as `08db6e2`.
+
 ## Step 7: Quantifier elimination extensions
 
 - [ ] Support recursive lifting for multiple quantified variables.

@@ -235,6 +235,24 @@ fn reduces_quantified_boolean_branches_before_the_outer_quantifier() {
 }
 
 #[test]
+fn validates_synthesized_results_on_algebraic_base_cells() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let body = Formula::And(vec![
+        Formula::atom(y - x.clone(), Relation::Equal),
+        Formula::atom(x.clone() * x - Polynomial::integer(2), Relation::Equal),
+    ]);
+    let eliminated = eliminate(&Formula::exists(1, body)).unwrap();
+    let base_cells = decompose_univariate(&[UnivariatePolynomial::from_integers(&[-2, 0, 1])]);
+    let values = base_cells
+        .iter()
+        .map(|cell| cell.evaluate_formula(&eliminated).unwrap())
+        .collect::<Vec<_>>();
+
+    assert_eq!(values, vec![false, true, false, true, false]);
+}
+
+#[test]
 fn eliminates_boolean_combinations_and_strict_inequalities() {
     let x = Polynomial::variable(0);
     let y = Polynomial::variable(1);
