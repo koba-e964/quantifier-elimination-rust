@@ -51,7 +51,8 @@ fn simplify_conjunction(formulas: &[Formula]) -> Formula {
             Formula::True => {}
             Formula::False => return Formula::False,
             Formula::And(nested) => simplified.extend(nested),
-            formula => simplified.push(formula),
+            formula if !simplified.contains(&formula) => simplified.push(formula),
+            _ => {}
         }
     }
     match simplified.len() {
@@ -68,7 +69,8 @@ fn simplify_disjunction(formulas: &[Formula]) -> Formula {
             Formula::False => {}
             Formula::True => return Formula::True,
             Formula::Or(nested) => simplified.extend(nested),
-            formula => simplified.push(formula),
+            formula if !simplified.contains(&formula) => simplified.push(formula),
+            _ => {}
         }
     }
     match simplified.len() {

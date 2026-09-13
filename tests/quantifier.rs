@@ -79,6 +79,10 @@ fn simplifies_boolean_identities_and_flattens_connectives() {
         simplify(&Formula::Or(vec![Formula::False, Formula::True])),
         Formula::True
     );
+    assert_eq!(
+        simplify(&Formula::Or(vec![atom.clone(), atom.clone()])),
+        atom
+    );
 }
 
 #[test]

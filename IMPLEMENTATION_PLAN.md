@@ -294,7 +294,13 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Use the recursive tree for quantifier elimination rather than only exposing a lifting API.
 - [x] Synthesize conditions over multiple free variables.
 - [x] Add algebraic-section semantic coverage and resolve remaining supported arithmetic.
-- [ ] Validate, show the literal diff, and commit this substep.
+- [x] Validate, show the literal diff, and commit this substep as `afd8024`.
+
+## Step 13d: Synthesized-condition canonicalization
+
+- [x] Deduplicate structurally identical conjunction and disjunction branches.
+- [x] Add regression coverage for duplicate synthesized branches.
+- [ ] Commit this higher-dimensional QE substep after the full validation pass.
 
 ## Validation required for each completed logical step
 
