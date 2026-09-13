@@ -65,21 +65,18 @@ impl TwoDimensionalLifting {
             .zip(&self.lifted_cells)
             .map(|(base, lifted)| {
                 let mut values = std::collections::BTreeMap::new();
-                if base.algebraic_root_sample.is_some()
-                    || lifted
-                        .iter()
-                        .any(|cell| cell.algebraic_root_sample.is_some())
-                {
+                if base.algebraic_root_sample.is_some() {
                     return Err(FormulaEvaluationError::AlgebraicRootSampleUnsupported);
                 }
                 values.insert(variable_order[0], base.sample.clone());
                 lifted
                     .iter()
                     .map(|cell| {
-                        if base
-                            .exact_sample
-                            .as_ref()
-                            .is_some_and(|sample| sample.rational_value().is_none())
+                        if cell.algebraic_root_sample.is_some()
+                            || base
+                                .exact_sample
+                                .as_ref()
+                                .is_some_and(|sample| sample.rational_value().is_none())
                         {
                             evaluate_formula_at_exact_lifted_cell(
                                 formula,
@@ -409,7 +406,14 @@ pub fn lift_two_variables(
                         specialize_to_algebraic_univariate(polynomial, variable_order[1], &values)
                     })
                     .collect::<Result<Vec<_>, _>>()?;
-                let cells = decompose_linear_algebraic(&specialized)?;
+                let cells = if specialized
+                    .iter()
+                    .all(|polynomial| polynomial.degree().is_none_or(|degree| degree <= 1))
+                {
+                    decompose_linear_algebraic(&specialized)?
+                } else {
+                    decompose_algebraic_univariate(&specialized)?
+                };
                 let signs = cells
                     .iter()
                     .map(|lifted| {

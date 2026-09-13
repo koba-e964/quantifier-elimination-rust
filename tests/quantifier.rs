@@ -1,7 +1,6 @@
 use num_rational::BigRational;
 use quantifier_elimination::algebra::univariate::UnivariatePolynomial;
 use quantifier_elimination::cad::lifting::decompose_univariate;
-use quantifier_elimination::cad::lifting::LiftingError;
 use quantifier_elimination::qe::evaluate::{
     decide_univariate, eliminate, eliminate_one_variable, eliminate_univariate,
 };
@@ -228,7 +227,7 @@ fn handles_universal_strict_inequalities_and_disequalities() {
 }
 
 #[test]
-fn rejects_unsupported_algebraic_coefficient_root_degrees() {
+fn eliminates_quadratic_lifting_over_an_irrational_base_section() {
     let x = Polynomial::variable(0);
     let y = Polynomial::variable(1);
     let body = Formula::atom(
@@ -237,12 +236,12 @@ fn rejects_unsupported_algebraic_coefficient_root_degrees() {
     );
     let formula = Formula::exists(1, body);
 
-    assert_eq!(
-        eliminate(&formula),
-        Err(QuantifierEvaluationError::Lifting(
-            LiftingError::AlgebraicCoefficientRootUnsupported,
-        ))
-    );
+    let eliminated = eliminate(&formula).unwrap();
+    for (value, expected) in [(0, false), (2, true)] {
+        let mut assignment = BTreeMap::new();
+        assignment.insert(0, BigRational::from_integer(value.into()));
+        assert_eq!(eliminated.evaluate(&assignment), Some(expected));
+    }
 }
 
 #[test]
