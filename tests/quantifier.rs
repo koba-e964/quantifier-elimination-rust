@@ -326,8 +326,9 @@ fn lifts_linear_polynomials_over_irrational_base_sections() {
 #[test]
 fn reports_unsupported_elimination_shapes() {
     let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
     let z = Polynomial::variable(2);
-    let formula = Formula::exists(1, Formula::atom(x + z, Relation::Equal));
+    let formula = Formula::exists(1, Formula::atom(x + y + z, Relation::Equal));
     assert_eq!(
         quantifier_elimination::eliminate(&formula),
         Err(QuantifierEvaluationError::WrongVariable)
@@ -336,4 +337,14 @@ fn reports_unsupported_elimination_shapes() {
         quantifier_elimination::eliminate(&Formula::True),
         Err(QuantifierEvaluationError::WrongVariable)
     );
+}
+
+#[test]
+fn eliminates_vacuous_quantifiers_with_multiple_free_variables() {
+    let x = Polynomial::variable(0);
+    let z = Polynomial::variable(2);
+    let body = Formula::atom(x + z, Relation::Equal);
+
+    assert_eq!(eliminate(&Formula::exists(1, body.clone())).unwrap(), body);
+    assert_eq!(eliminate(&Formula::forall(1, body.clone())).unwrap(), body);
 }

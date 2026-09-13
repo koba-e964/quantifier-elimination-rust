@@ -152,6 +152,13 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Preserve the exact empty-root result.
 - [x] Commit this root-isolation coverage substep as `2fb96b6`.
 
+## Step 10a: Vacuous multivariate quantifiers
+
+- [x] Eliminate quantifiers whose bound variable is absent from the body.
+- [x] Preserve bodies with multiple free variables without invoking CAD synthesis.
+- [x] Add existential and universal regression coverage.
+- [x] Commit this higher-dimensional QE substep as `afc2f0f`.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`

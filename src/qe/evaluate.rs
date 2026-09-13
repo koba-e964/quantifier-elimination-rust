@@ -6,6 +6,7 @@ use crate::cad::lifting::{
 use crate::cad::projection::ProjectionError;
 use crate::formula::{Atom, Formula, Quantifier};
 use crate::polynomial::Monomial;
+use crate::qe::simplify::simplify;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum QuantifierEvaluationError {
@@ -96,6 +97,9 @@ fn eliminate_recursive(formula: &Formula) -> Result<Formula, QuantifierEvaluatio
     };
 
     let body = eliminate_nested_children(body)?;
+    if !body.free_variables().contains(variable) {
+        return Ok(simplify(&body));
+    }
     let reduced = Formula::Quantified {
         quantifier: *quantifier,
         variable: *variable,
