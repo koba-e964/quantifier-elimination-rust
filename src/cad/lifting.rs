@@ -161,7 +161,10 @@ impl UnivariateCell {
 
     pub fn sign_of_algebraic(&self, polynomial: &AlgebraicPolynomial) -> Result<i8, LiftingError> {
         let value = polynomial
-            .evaluate(&exact_value(self))
+            .evaluate(
+                &exact_value(self)
+                    .map_err(|_| LiftingError::AlgebraicCoefficientRootUnsupported)?,
+            )
             .map_err(|_| LiftingError::AlgebraicCoefficientRootUnsupported)?;
         Ok(match value.sign() {
             std::cmp::Ordering::Less => -1,
@@ -528,8 +531,8 @@ pub fn evaluate_formula_at_exact_lifted_cell(
     lifted_cell: &UnivariateCell,
 ) -> Result<bool, FormulaEvaluationError> {
     let mut values = std::collections::BTreeMap::new();
-    values.insert(base_variable, exact_value(base_cell));
-    values.insert(lifted_variable, exact_value(lifted_cell));
+    values.insert(base_variable, exact_value(base_cell)?);
+    values.insert(lifted_variable, exact_value(lifted_cell)?);
     evaluate_formula_at_exact_values(formula, &values)
 }
 
@@ -566,11 +569,17 @@ fn evaluate_formula_at_exact_values(
     }
 }
 
-fn exact_value(cell: &UnivariateCell) -> crate::algebra::coefficient::ExactReal {
-    cell.exact_sample
+fn exact_value(
+    cell: &UnivariateCell,
+) -> Result<crate::algebra::coefficient::ExactReal, FormulaEvaluationError> {
+    if cell.algebraic_root_sample.is_some() {
+        return Err(FormulaEvaluationError::AlgebraicRootSampleUnsupported);
+    }
+    Ok(cell
+        .exact_sample
         .clone()
         .map(crate::algebra::coefficient::ExactReal::algebraic)
-        .unwrap_or_else(|| crate::algebra::coefficient::ExactReal::rational(cell.sample.clone()))
+        .unwrap_or_else(|| crate::algebra::coefficient::ExactReal::rational(cell.sample.clone())))
 }
 
 pub fn cell_condition(
