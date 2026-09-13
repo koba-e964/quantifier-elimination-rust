@@ -230,7 +230,7 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Factor independent conjunction guards from existential quantifiers.
 - [x] Factor independent disjunction guards from universal quantifiers.
 - [x] Add multivariate semantic coverage for both factoring rules.
-- [ ] Commit this higher-dimensional QE substep.
+- [x] Commit this higher-dimensional QE substep as `3aeaf26`.
 
 ## Validation required for each completed logical step
 
