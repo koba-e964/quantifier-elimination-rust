@@ -51,8 +51,8 @@ implicit multiplication, and named variables are not supported yet.
 `eliminate` supports closed one-variable formulas, formulas with one quantified
 variable plus one free variable, vacuous quantifiers, and single atomic formulas
 linear in the quantified variable even when multiple free variables remain.
-General multivariate synthesis for nonlinear or compound formulas is not
-supported yet.
+General multivariate synthesis for nonlinear formulas and Boolean combinations
+that cannot be distributed into supported branches is not supported yet.
 
 Two-variable lifting supports quadratic sections over irrational algebraic base
 samples. Formula relations at lifted algebraic sections are evaluated exactly

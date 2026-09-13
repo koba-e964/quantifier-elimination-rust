@@ -105,6 +105,10 @@ fn eliminate_recursive(formula: &Formula) -> Result<Formula, QuantifierEvaluatio
         variable: *variable,
         body: Box::new(body),
     };
+    if let Some(eliminated) = eliminate_supported_boolean_branches(*quantifier, *variable, &reduced)
+    {
+        return Ok(simplify(&eliminated?));
+    }
     if let Some(eliminated) = eliminate_linear_atom(&reduced, *variable) {
         return Ok(simplify(&eliminated));
     }
@@ -115,6 +119,41 @@ fn eliminate_recursive(formula: &Formula) -> Result<Formula, QuantifierEvaluatio
         eliminate_one_variable(&reduced, *free_variables.first().unwrap(), *variable)
     } else {
         Err(QuantifierEvaluationError::WrongVariable)
+    }
+}
+
+fn eliminate_supported_boolean_branches(
+    quantifier: Quantifier,
+    variable: usize,
+    formula: &Formula,
+) -> Option<Result<Formula, QuantifierEvaluationError>> {
+    let Formula::Quantified { body, .. } = formula else {
+        return None;
+    };
+    match (quantifier, body.as_ref()) {
+        (Quantifier::Exists, Formula::Or(branches)) => Some(
+            branches
+                .iter()
+                .map(|branch| eliminate_recursive(&Formula::exists(variable, branch.clone())))
+                .collect::<Result<Vec<_>, _>>()
+                .map(Formula::Or),
+        ),
+        (Quantifier::Forall, Formula::And(branches)) => Some(
+            branches
+                .iter()
+                .map(|branch| eliminate_recursive(&Formula::forall(variable, branch.clone())))
+                .collect::<Result<Vec<_>, _>>()
+                .map(Formula::And),
+        ),
+        (Quantifier::Exists, Formula::Not(inner)) => Some(
+            eliminate_recursive(&Formula::forall(variable, inner.as_ref().clone()))
+                .map(|result| Formula::Not(Box::new(result))),
+        ),
+        (Quantifier::Forall, Formula::Not(inner)) => Some(
+            eliminate_recursive(&Formula::exists(variable, inner.as_ref().clone()))
+                .map(|result| Formula::Not(Box::new(result))),
+        ),
+        _ => None,
     }
 }
 

@@ -206,6 +206,14 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Add multivariate semantic regression coverage.
 - [x] Commit this higher-dimensional QE substep as `922a58f`.
 
+## Step 11a: Supported Boolean branch distribution
+
+- [x] Distribute existential disjunctions branchwise.
+- [x] Distribute universal conjunctions branchwise.
+- [x] Dualize negated quantified bodies exactly.
+- [x] Add compound multivariate regression coverage.
+- [ ] Commit this higher-dimensional QE substep.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`

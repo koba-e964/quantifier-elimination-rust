@@ -486,3 +486,35 @@ fn eliminates_negated_linear_atoms_with_multiple_free_variables() {
         assert_eq!(eliminated.evaluate(&values), Some(expected));
     }
 }
+
+#[test]
+fn distributes_supported_boolean_branches_over_multiple_free_variables() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let z = Polynomial::variable(2);
+    let existential = Formula::exists(
+        1,
+        Formula::Or(vec![
+            Formula::atom(
+                (x.clone() + z.clone()) * y.clone() - Polynomial::integer(1),
+                Relation::Equal,
+            ),
+            Formula::atom(y.clone() + x.clone() - z.clone(), Relation::Greater),
+        ]),
+    );
+    let universal = Formula::forall(
+        1,
+        Formula::And(vec![
+            Formula::atom(y.clone() * (x.clone() + z.clone()), Relation::Equal),
+            Formula::atom(y - x + z, Relation::Equal),
+        ]),
+    );
+
+    let existential_result = eliminate(&existential).unwrap();
+    let universal_result = eliminate(&universal).unwrap();
+    let mut values = BTreeMap::new();
+    values.insert(0, BigRational::from_integer(1.into()));
+    values.insert(2, BigRational::from_integer(2.into()));
+    assert_eq!(existential_result.evaluate(&values), Some(true));
+    assert_eq!(universal_result.evaluate(&values), Some(false));
+}
