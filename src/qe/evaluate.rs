@@ -112,6 +112,9 @@ fn eliminate_recursive(formula: &Formula) -> Result<Formula, QuantifierEvaluatio
     if let Some(eliminated) = eliminate_exists_linear_conjunction(&reduced, *variable) {
         return Ok(simplify(&eliminated));
     }
+    if let Some(eliminated) = eliminate_exists_linear_inequalities(&reduced, *variable) {
+        return Ok(simplify(&eliminated));
+    }
     if let Some(eliminated) = eliminate_supported_boolean_branches(*quantifier, *variable, &reduced)
     {
         return Ok(simplify(&eliminated?));
@@ -201,6 +204,75 @@ fn eliminate_exists_linear_conjunction(formula: &Formula, variable: usize) -> Op
             reverse_inequality(atom.relation)
         };
         conditions.push(Formula::atom(substituted, relation));
+    }
+    Some(Formula::And(conditions))
+}
+
+fn eliminate_exists_linear_inequalities(formula: &Formula, variable: usize) -> Option<Formula> {
+    let Formula::Quantified {
+        quantifier: Quantifier::Exists,
+        body,
+        ..
+    } = formula
+    else {
+        return None;
+    };
+    let Formula::And(branches) = body.as_ref() else {
+        return None;
+    };
+    let mut lower_bounds = Vec::new();
+    let mut upper_bounds = Vec::new();
+    let mut conditions = Vec::new();
+    for branch in branches {
+        let atom = atom_with_negated_relation(branch)?;
+        match atom.polynomial.degree(variable) {
+            0 => conditions.push(Formula::Atom(atom)),
+            1 => {
+                let coefficient = atom.polynomial.coefficient_in(variable, 1);
+                if coefficient.variables().next().is_some() || coefficient.is_zero() {
+                    return None;
+                }
+                let constant = atom.polynomial.coefficient_in(variable, 0);
+                let positive = coefficient.evaluate(&Default::default()).is_positive();
+                let (is_lower, strict) = match (positive, atom.relation) {
+                    (true, crate::formula::Relation::Greater) => (true, true),
+                    (true, crate::formula::Relation::GreaterOrEqual) => (true, false),
+                    (true, crate::formula::Relation::Less) => (false, true),
+                    (true, crate::formula::Relation::LessOrEqual) => (false, false),
+                    (false, crate::formula::Relation::Greater) => (false, true),
+                    (false, crate::formula::Relation::GreaterOrEqual) => (false, false),
+                    (false, crate::formula::Relation::Less) => (true, true),
+                    (false, crate::formula::Relation::LessOrEqual) => (true, false),
+                    _ => return None,
+                };
+                if is_lower {
+                    if positive {
+                        lower_bounds.push((coefficient, constant, strict));
+                    } else {
+                        lower_bounds.push((-coefficient, -constant, strict));
+                    }
+                } else {
+                    if positive {
+                        upper_bounds.push((coefficient, constant, strict));
+                    } else {
+                        upper_bounds.push((-coefficient, -constant, strict));
+                    }
+                }
+            }
+            _ => return None,
+        }
+    }
+    for (lower_coefficient, lower_constant, lower_strict) in &lower_bounds {
+        for (upper_coefficient, upper_constant, upper_strict) in &upper_bounds {
+            let difference = upper_coefficient.clone() * lower_constant.clone()
+                - lower_coefficient.clone() * upper_constant.clone();
+            let relation = if *lower_strict || *upper_strict {
+                crate::formula::Relation::Greater
+            } else {
+                crate::formula::Relation::GreaterOrEqual
+            };
+            conditions.push(Formula::atom(difference, relation));
+        }
     }
     Some(Formula::And(conditions))
 }

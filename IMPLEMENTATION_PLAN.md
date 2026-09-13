@@ -260,6 +260,13 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Add semantic coverage for a negated branch.
 - [x] Commit this higher-dimensional QE substep as `2ab8355`.
 
+## Step 12e: Existential linear inequality bounds
+
+- [x] Convert constant-coefficient linear atoms into exact lower/upper bounds.
+- [x] Preserve strict and non-strict bound comparisons.
+- [x] Add semantic coverage for feasible and infeasible intervals.
+- [ ] Commit this higher-dimensional QE substep.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`

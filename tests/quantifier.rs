@@ -654,3 +654,25 @@ fn substitutes_negated_linear_conjunction_branches() {
     values.insert(2, BigRational::from_integer(2.into()));
     assert_eq!(eliminated.evaluate(&values), Some(false));
 }
+
+#[test]
+fn eliminates_existential_linear_inequality_bounds() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let z = Polynomial::variable(2);
+    let formula = Formula::exists(
+        1,
+        Formula::And(vec![
+            Formula::atom(y.clone() - x, Relation::Greater),
+            Formula::atom(y - z, Relation::LessOrEqual),
+        ]),
+    );
+    let eliminated = eliminate(&formula).unwrap();
+
+    for (x_value, z_value, expected) in [(0, 1, true), (1, 1, false), (2, 1, false)] {
+        let mut values = BTreeMap::new();
+        values.insert(0, BigRational::from_integer(x_value.into()));
+        values.insert(2, BigRational::from_integer(z_value.into()));
+        assert_eq!(eliminated.evaluate(&values), Some(expected));
+    }
+}
