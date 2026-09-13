@@ -4,8 +4,8 @@ use quantifier_elimination::algebra::coefficient::{AlgebraicPolynomial, ExactRea
 use quantifier_elimination::algebra::univariate::UnivariatePolynomial;
 use quantifier_elimination::cad::lifting::{
     cell_condition, decompose_algebraic_univariate, decompose_univariate,
-    evaluate_formula_at_exact_lifted_cell, lift_over_rational_sample, lift_two_variables,
-    synthesize_cell_conditions, CellKind,
+    evaluate_formula_at_exact_lifted_cell, lift_over_rational_sample, lift_recursive,
+    lift_two_variables, synthesize_cell_conditions, CellKind,
 };
 use quantifier_elimination::Polynomial;
 use quantifier_elimination::{Formula, Relation};
@@ -293,6 +293,22 @@ fn builds_a_two_variable_lifting_layer() {
         .map(|cell| cell_condition(cell, &lifting.base_polynomials, 1))
         .collect::<Vec<_>>();
     assert_eq!(conditions.len(), lifting.base_cells.len());
+}
+
+#[test]
+fn builds_recursive_three_variable_lifting_and_evaluates_exact_leaves() {
+    let roots = (0..3)
+        .map(|variable| {
+            let coordinate = Polynomial::variable(variable);
+            Formula::atom(coordinate, Relation::Equal)
+        })
+        .collect::<Vec<_>>();
+    let formula = Formula::And(roots);
+    let lifting = lift_recursive(&formula, &[0, 1, 2]).unwrap();
+    let truth_values = lifting.leaf_values(&formula).unwrap();
+
+    assert_eq!(truth_values.len(), 27);
+    assert_eq!(truth_values.iter().filter(|value| **value).count(), 1);
 }
 
 #[test]

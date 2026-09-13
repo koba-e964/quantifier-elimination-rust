@@ -10,6 +10,7 @@ use crate::polynomial::{Polynomial, PolynomialEvaluationError, Variable};
 use num_bigint::BigInt;
 use num_rational::BigRational;
 use num_traits::{Signed, Zero};
+use std::collections::BTreeMap;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum CellKind {
@@ -54,6 +55,33 @@ pub struct TwoDimensionalLifting {
     pub base_signs: Vec<Vec<i8>>,
     pub lifted_cells: Vec<Vec<UnivariateCell>>,
     pub lifted_signs: Vec<Vec<Vec<i8>>>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CadCell {
+    pub coordinate: UnivariateCell,
+    pub children: Vec<CadCell>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RecursiveLifting {
+    pub projection_stack: ProjectionStack,
+    pub cells: Vec<CadCell>,
+}
+
+impl RecursiveLifting {
+    pub fn leaf_values(&self, formula: &Formula) -> Result<Vec<bool>, FormulaEvaluationError> {
+        let mut values = Vec::new();
+        collect_leaf_truth_values(
+            &self.cells,
+            formula,
+            &self.projection_stack.variable_order,
+            0,
+            &mut std::collections::BTreeMap::new(),
+            &mut values,
+        )?;
+        Ok(values)
+    }
 }
 
 impl TwoDimensionalLifting {
@@ -450,6 +478,123 @@ pub fn lift_two_variables(
         lifted_cells,
         lifted_signs,
     })
+}
+
+pub fn lift_recursive(
+    formula: &Formula,
+    variable_order: &[Variable],
+) -> Result<RecursiveLifting, LiftingError> {
+    let projection_stack = build_projection_stack(formula, variable_order)?;
+    let cells = lift_recursive_level(&projection_stack, 0, &BTreeMap::new())?;
+    Ok(RecursiveLifting {
+        projection_stack,
+        cells,
+    })
+}
+
+fn lift_recursive_level(
+    stack: &ProjectionStack,
+    coordinate_index: usize,
+    values: &BTreeMap<Variable, ExactReal>,
+) -> Result<Vec<CadCell>, LiftingError> {
+    let variable_order = &stack.variable_order;
+    if coordinate_index == variable_order.len() {
+        return Ok(Vec::new());
+    }
+    let variable = variable_order[coordinate_index];
+    let projection_level = variable_order.len() - coordinate_index - 1;
+    let specialized = stack.levels[projection_level]
+        .iter()
+        .filter(|polynomial| polynomial.variables().any(|item| item == variable))
+        .map(|polynomial| specialize_to_algebraic_univariate(polynomial, variable, values))
+        .collect::<Result<Vec<_>, _>>()?;
+    let cells = decompose_specialized_cells(&specialized)?;
+    cells
+        .into_iter()
+        .map(|coordinate| {
+            let mut child_values = values.clone();
+            child_values.insert(variable, exact_value_for_lifting(&coordinate)?);
+            let children = if coordinate_index + 1 == variable_order.len() {
+                Vec::new()
+            } else {
+                lift_recursive_level(stack, coordinate_index + 1, &child_values)?
+            };
+            Ok(CadCell {
+                coordinate,
+                children,
+            })
+        })
+        .collect()
+}
+
+fn decompose_specialized_cells(
+    polynomials: &[AlgebraicPolynomial],
+) -> Result<Vec<UnivariateCell>, LiftingError> {
+    if polynomials.iter().all(|polynomial| {
+        polynomial
+            .coefficients()
+            .iter()
+            .all(|coefficient| matches!(coefficient, ExactReal::Rational(_)))
+    }) {
+        let rational = polynomials
+            .iter()
+            .map(|polynomial| {
+                UnivariatePolynomial::new(
+                    polynomial
+                        .coefficients()
+                        .iter()
+                        .map(|coefficient| match coefficient {
+                            ExactReal::Rational(value) => value.clone(),
+                            ExactReal::Algebraic(_) | ExactReal::AlgebraicRoot(_) => {
+                                unreachable!("rational specialization checked above")
+                            }
+                        })
+                        .collect(),
+                )
+            })
+            .collect::<Vec<_>>();
+        Ok(decompose_univariate(&rational))
+    } else {
+        decompose_algebraic_univariate(polynomials)
+    }
+}
+
+fn exact_value_for_lifting(cell: &UnivariateCell) -> Result<ExactReal, LiftingError> {
+    if let Some(value) = &cell.exact_sample {
+        return Ok(ExactReal::algebraic(value.clone()));
+    }
+    if let Some(value) = &cell.algebraic_root_sample {
+        return Ok(ExactReal::algebraic_root(value.clone()));
+    }
+    Ok(ExactReal::rational(cell.sample.clone()))
+}
+
+fn collect_leaf_truth_values(
+    cells: &[CadCell],
+    formula: &Formula,
+    variable_order: &[Variable],
+    coordinate_index: usize,
+    values: &mut BTreeMap<Variable, ExactReal>,
+    result: &mut Vec<bool>,
+) -> Result<(), FormulaEvaluationError> {
+    for cell in cells {
+        let variable = variable_order[coordinate_index];
+        values.insert(variable, exact_value(&cell.coordinate)?);
+        if cell.children.is_empty() {
+            result.push(evaluate_formula_at_exact_values(formula, values)?);
+        } else {
+            collect_leaf_truth_values(
+                &cell.children,
+                formula,
+                variable_order,
+                coordinate_index + 1,
+                values,
+                result,
+            )?;
+        }
+        values.remove(&variable);
+    }
+    Ok(())
 }
 
 fn decompose_linear_algebraic(
