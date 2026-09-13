@@ -239,6 +239,13 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Add multivariate semantic coverage for the substitution path.
 - [x] Commit this higher-dimensional QE substep as `fa30775`.
 
+## Step 12b: Universal linear-equality conjunctions
+
+- [x] Detect nonconstant linear equalities in universal conjunctions.
+- [x] Reduce those conjunctions to false exactly.
+- [x] Add a multivariate regression test.
+- [ ] Commit this higher-dimensional QE substep.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`

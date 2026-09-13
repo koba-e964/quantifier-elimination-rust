@@ -106,6 +106,9 @@ fn eliminate_recursive(formula: &Formula) -> Result<Formula, QuantifierEvaluatio
         variable: *variable,
         body: Box::new(body),
     };
+    if let Some(eliminated) = eliminate_forall_linear_equality(&reduced, *variable) {
+        return Ok(eliminated);
+    }
     if let Some(eliminated) = eliminate_exists_linear_conjunction(&reduced, *variable) {
         return Ok(simplify(&eliminated));
     }
@@ -124,6 +127,36 @@ fn eliminate_recursive(formula: &Formula) -> Result<Formula, QuantifierEvaluatio
     } else {
         Err(QuantifierEvaluationError::WrongVariable)
     }
+}
+
+fn eliminate_forall_linear_equality(formula: &Formula, variable: usize) -> Option<Formula> {
+    let Formula::Quantified {
+        quantifier: Quantifier::Forall,
+        body,
+        ..
+    } = formula
+    else {
+        return None;
+    };
+    let Formula::And(branches) = body.as_ref() else {
+        return None;
+    };
+    branches.iter().find_map(|branch| {
+        let Formula::Atom(atom) = branch else {
+            return None;
+        };
+        if atom.relation != crate::formula::Relation::Equal || atom.polynomial.degree(variable) != 1
+        {
+            return None;
+        }
+        let leading = atom.polynomial.coefficient_in(variable, 1);
+        if leading.variables().next().is_some()
+            || !leading.evaluate(&Default::default()).is_positive()
+        {
+            return None;
+        }
+        Some(Formula::False)
+    })
 }
 
 fn eliminate_exists_linear_conjunction(formula: &Formula, variable: usize) -> Option<Formula> {

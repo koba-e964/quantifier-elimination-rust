@@ -594,3 +594,19 @@ fn substitutes_positive_constant_leading_linear_equalities() {
         assert_eq!(eliminated.evaluate(&values), Some(expected));
     }
 }
+
+#[test]
+fn rejects_universal_conjunctions_with_linear_equalities() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let z = Polynomial::variable(2);
+    let formula = Formula::forall(
+        1,
+        Formula::And(vec![
+            Formula::atom(y - x.clone() - z, Relation::Equal),
+            Formula::atom(x, Relation::Greater),
+        ]),
+    );
+
+    assert_eq!(eliminate(&formula).unwrap(), Formula::False);
+}
