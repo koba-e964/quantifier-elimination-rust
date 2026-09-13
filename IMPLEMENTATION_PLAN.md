@@ -191,7 +191,7 @@ logical step is completed as a unit; approval is requested before its commit.
 
 - [x] Document linear atomic multivariate elimination as supported.
 - [x] Retain explicit documentation for unsupported nonlinear and compound cases.
-- [ ] Commit this higher-dimensional QE substep.
+- [x] Commit this higher-dimensional QE substep as `372df97`.
 
 ## Validation required for each completed logical step
 
