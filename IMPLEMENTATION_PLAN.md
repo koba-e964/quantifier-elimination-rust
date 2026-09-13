@@ -220,6 +220,11 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Add a nested existential regression with one remaining free variable.
 - [x] Commit this higher-dimensional QE substep as `9c26d5a`.
 
+## Step 11c: QE boundary comment audit
+
+- [x] Align public dispatch documentation with the supported multivariate cases.
+- [ ] Commit this documentation substep.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`
