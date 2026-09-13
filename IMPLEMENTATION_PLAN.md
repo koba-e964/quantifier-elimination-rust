@@ -93,6 +93,16 @@ logical step is completed as a unit; approval is requested before its commit.
 - [ ] Preserve Boolean structure and simplify synthesized formulas.
 - [ ] Add semantic validation over rational and algebraic assignments.
 
+## Step 8: Parser and CLI
+
+- [ ] Define and document a textual grammar for variables, polynomials, relations, Boolean connectives, and quantifiers.
+- [ ] Implement a parser with location-aware, user-facing errors.
+- [ ] Add a CLI binary that parses a formula and prints the eliminated result.
+- [ ] Support input from an argument and from standard input.
+- [ ] Add parser unit tests and CLI integration tests.
+- [ ] Document examples and unsupported syntax.
+- [x] Parser foundation committed as `9749b29`; CLI remains for the next substep.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`

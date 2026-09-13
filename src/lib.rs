@@ -8,6 +8,7 @@
 pub mod algebra;
 pub mod cad;
 pub mod formula;
+pub mod parser;
 pub mod polynomial;
 pub mod qe;
 
@@ -17,5 +18,6 @@ pub use algebra::coefficient::{
 };
 pub use algebra::univariate::{RootInterval, UnivariatePolynomial};
 pub use formula::{Atom, Formula, Quantifier, Relation, RenameError};
+pub use parser::{parse_formula, ParseError};
 pub use polynomial::{Monomial, Polynomial, PolynomialEvaluationError, Variable, VariableNames};
 pub use qe::evaluate::{eliminate, QuantifierEvaluationError};
