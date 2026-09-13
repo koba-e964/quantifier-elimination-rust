@@ -185,7 +185,7 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Cover all six relations for existential linear elimination.
 - [x] Cover all six relations for universal linear elimination.
 - [x] Verify zero and nonzero leading-coefficient cases semantically.
-- [ ] Commit this higher-dimensional QE substep.
+- [x] Commit this higher-dimensional QE substep as `7b27be9`.
 
 ## Validation required for each completed logical step
 
