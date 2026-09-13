@@ -282,6 +282,20 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Add regression coverage for exact root-sample arithmetic.
 - [x] Commit this higher-dimensional CAD substep as `72577fa`.
 
+## Step 13b: Recursive multi-level lifting
+
+- [x] Represent arbitrary-depth CAD cells as a recursive lifting tree.
+- [x] Specialize each projection level at the exact values on its parent path.
+- [x] Evaluate a three-variable recursive tree and its leaf truth values.
+- [x] Commit this higher-dimensional CAD substep as `9f3bd67`.
+
+## Step 13c: Recursive QE integration
+
+- [ ] Use the recursive tree for quantifier elimination rather than only exposing a lifting API.
+- [ ] Synthesize conditions over multiple free variables.
+- [ ] Add algebraic-section semantic coverage and resolve remaining unsupported arithmetic.
+- [ ] Validate, show the literal diff, and commit this substep.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`
