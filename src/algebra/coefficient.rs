@@ -461,6 +461,43 @@ fn isolate_bernstein_to_width(
     if depth > 256 || lower >= upper {
         return Err(ExactRealError::InvalidAlgebraicRootSample);
     }
+    let lower_is_root = polynomial
+        .evaluate(&ExactReal::rational(lower.clone()))?
+        .is_zero();
+    let upper_is_root = polynomial
+        .evaluate(&ExactReal::rational(upper.clone()))?
+        .is_zero();
+    if lower_is_root || upper_is_root {
+        if (&upper - &lower) <= *maximum_width {
+            roots.push(RootInterval::new(lower, upper));
+            return Ok(());
+        }
+        let midpoint = (&lower + &upper) / BigInt::from(2);
+        if midpoint == lower || midpoint == upper {
+            return Err(ExactRealError::InvalidAlgebraicRootSample);
+        }
+        return if lower_is_root {
+            isolate_bernstein_to_width(
+                polynomial,
+                degree,
+                lower,
+                midpoint,
+                maximum_width,
+                roots,
+                depth + 1,
+            )
+        } else {
+            isolate_bernstein_to_width(
+                polynomial,
+                degree,
+                midpoint,
+                upper,
+                maximum_width,
+                roots,
+                depth + 1,
+            )
+        };
+    }
     let coefficients = bernstein_coefficients(polynomial, degree, &lower, &upper)?;
     let variations = sign_variations(&coefficients);
     if variations == 0 {

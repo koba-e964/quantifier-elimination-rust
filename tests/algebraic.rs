@@ -235,6 +235,27 @@ fn compares_common_roots_from_different_defining_polynomials() {
 }
 
 #[test]
+fn refines_an_algebraic_root_sample_at_an_interval_endpoint() {
+    let polynomial = AlgebraicPolynomial::new(vec![
+        ExactReal::rational(BigRational::zero()),
+        ExactReal::rational(BigRational::from_integer(1.into())),
+    ]);
+    let sample = AlgebraicRootSample::new(
+        polynomial.clone(),
+        quantifier_elimination::RootInterval::new(
+            BigRational::zero(),
+            BigRational::new(1.into(), 2.into()),
+        ),
+    );
+
+    let refined = sample
+        .refine(&BigRational::new(1.into(), 16.into()))
+        .unwrap();
+    assert!(refined.interval().width() <= BigRational::new(1.into(), 16.into()));
+    assert_eq!(refined.sign_of(&polynomial), Ok(Ordering::Equal));
+}
+
+#[test]
 fn isolates_distinct_repeated_rational_roots_exactly() {
     let polynomial = AlgebraicPolynomial::new(vec![
         ExactReal::rational(BigRational::from_integer(4.into())),

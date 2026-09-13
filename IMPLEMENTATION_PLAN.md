@@ -126,6 +126,13 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Add regression coverage for scaled defining polynomials.
 - [x] Commit this root-sample hardening substep as `784de0f`.
 
+## Step 9b: Endpoint-aware algebraic root refinement
+
+- [x] Detect exact roots on isolating interval boundaries.
+- [x] Refine boundary roots toward the endpoint without dropping them.
+- [x] Add endpoint refinement regression coverage.
+- [x] Commit this root-sample hardening substep as `05766c9`.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`
