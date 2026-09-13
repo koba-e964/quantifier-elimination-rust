@@ -307,7 +307,14 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Eliminate an inner nonlinear quantified variable with multiple free variables.
 - [x] Feed the synthesized result into an outer quantifier in the correct variable order.
 - [x] Add positive, negative, and zero-boundary semantic coverage.
-- [ ] Commit this higher-dimensional QE substep after the full validation pass.
+- [x] Commit this higher-dimensional QE substep as `e8a10b9`.
+
+## Step 14: Exactness and completion audit
+
+- [x] Audit remaining midpoint-derived fields and ensure none drive semantic decisions.
+- [x] Audit unsupported algebraic-root arithmetic paths for explicit errors, not false results.
+- [x] Update public scope documentation and add final semantic cases.
+- [ ] Run final validation, show the literal diff, commit all remaining work, and push.
 
 ## Validation required for each completed logical step
 

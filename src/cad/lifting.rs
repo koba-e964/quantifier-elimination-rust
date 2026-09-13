@@ -134,10 +134,7 @@ impl TwoDimensionalLifting {
                     .map(|cell| {
                         if cell.algebraic_root_sample.is_some()
                             || base.algebraic_root_sample.is_some()
-                            || base
-                                .exact_sample
-                                .as_ref()
-                                .is_some_and(|sample| sample.rational_value().is_none())
+                            || base.exact_sample.is_some()
                         {
                             evaluate_formula_at_exact_lifted_cell(
                                 formula,

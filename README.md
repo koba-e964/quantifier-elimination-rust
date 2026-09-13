@@ -10,7 +10,7 @@ decomposition (CAD) solver:
 - algebraic real samples represented by defining polynomials and isolating intervals;
 - algebraic-coefficient root samples with exact refinement, ordering, and deduplication;
 - Collins-style projection sets;
-- one- and two-variable CAD lifting;
+- recursive CAD lifting over arbitrary ordered variable lists;
 - Boolean formula evaluation and sign-condition synthesis.
 
 ## Example
@@ -49,16 +49,16 @@ implicit multiplication, and named variables are not supported yet.
 ## Current scope
 
 `eliminate` supports closed one-variable formulas, formulas with one quantified
-variable plus one free variable, vacuous quantifiers, and single atomic formulas
-linear in the quantified variable even when multiple free variables remain.
-General multivariate synthesis for nonlinear formulas and Boolean combinations
-that cannot be distributed into supported branches is not supported yet.
+variable plus free variables of arbitrary dimension, vacuous quantifiers,
+nested quantifier composition, and single atomic formulas linear in the
+quantified variable. Nonlinear multivariate formulas are synthesized from exact
+CAD sign conditions when the quantified variable is the final coordinate in
+the chosen variable order.
 
-Two-variable lifting supports quadratic sections over irrational algebraic base
-samples. Formula relations at lifted algebraic sections are evaluated exactly
-when the section has a rational defining polynomial. Operations that require
-general arithmetic or root comparison over algebraic coefficients still return
-explicit unsupported-operation errors.
+Lifting supports algebraic sections over irrational algebraic base samples and
+retains exact root samples through recursive paths when the required arithmetic
+is implemented. Operations that require general arithmetic or root comparison
+over algebraic coefficients still return explicit unsupported-operation errors.
 
 All decision procedures use exact rational or algebraic representations;
 floating-point arithmetic is not used for correctness decisions.
