@@ -348,3 +348,27 @@ fn eliminates_vacuous_quantifiers_with_multiple_free_variables() {
     assert_eq!(eliminate(&Formula::exists(1, body.clone())).unwrap(), body);
     assert_eq!(eliminate(&Formula::forall(1, body.clone())).unwrap(), body);
 }
+
+#[test]
+fn simplifies_dead_multivariate_quantifier_branches_before_dispatch() {
+    let x = Polynomial::variable(0);
+    let z = Polynomial::variable(2);
+    let relation = Formula::atom(x + z, Relation::Equal);
+
+    assert_eq!(
+        eliminate(&Formula::exists(
+            1,
+            Formula::And(vec![Formula::False, relation.clone()]),
+        ))
+        .unwrap(),
+        Formula::False
+    );
+    assert_eq!(
+        eliminate(&Formula::forall(
+            1,
+            Formula::Or(vec![Formula::True, relation]),
+        ))
+        .unwrap(),
+        Formula::True
+    );
+}

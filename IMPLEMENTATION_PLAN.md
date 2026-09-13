@@ -159,6 +159,13 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Add existential and universal regression coverage.
 - [x] Commit this higher-dimensional QE substep as `5086aa3`.
 
+## Step 10b: Boolean simplification before multivariate dispatch
+
+- [x] Normalize Boolean structure after recursively reducing nested quantifiers.
+- [x] Collapse dead quantified branches before free-variable counting.
+- [x] Add existential and universal multivariate regression coverage.
+- [ ] Commit this higher-dimensional QE substep.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`

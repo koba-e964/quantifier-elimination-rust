@@ -96,7 +96,7 @@ fn eliminate_recursive(formula: &Formula) -> Result<Formula, QuantifierEvaluatio
         return Err(QuantifierEvaluationError::WrongVariable);
     };
 
-    let body = eliminate_nested_children(body)?;
+    let body = simplify(&eliminate_nested_children(body)?);
     if !body.free_variables().contains(variable) {
         return Ok(simplify(&body));
     }
