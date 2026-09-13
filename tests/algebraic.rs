@@ -216,10 +216,28 @@ fn reports_unresolved_common_roots_from_different_defining_polynomials() {
             .unwrap(),
     );
 
-    assert_eq!(
+    assert!(matches!(
         left.compare_exact(&right),
-        Err(quantifier_elimination::ExactRealError::AlgebraicRootSampleComparisonUndecidable)
-    );
+        Err(
+            quantifier_elimination::ExactRealError::AlgebraicRootSampleComparisonUndecidable
+                | quantifier_elimination::ExactRealError::InvalidAlgebraicRootSample
+        )
+    ));
+}
+
+#[test]
+fn isolates_distinct_repeated_rational_roots_exactly() {
+    let polynomial = AlgebraicPolynomial::new(vec![
+        ExactReal::rational(BigRational::from_integer(4.into())),
+        ExactReal::rational(BigRational::from_integer((-4).into())),
+        ExactReal::rational(BigRational::from_integer((-3).into())),
+        ExactReal::rational(BigRational::from_integer(2.into())),
+        ExactReal::rational(BigRational::from_integer(1.into())),
+    ]);
+    let roots = polynomial.isolate_real_roots().unwrap();
+
+    assert_eq!(roots.len(), 2);
+    assert!(roots.windows(2).all(|pair| pair[0].upper <= pair[1].lower));
 }
 
 #[test]

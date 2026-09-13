@@ -321,6 +321,9 @@ impl AlgebraicPolynomial {
         if degree == 0 {
             return Ok(Vec::new());
         }
+        if let Some(rational) = self.as_rational_polynomial() {
+            return Ok(rational.isolate_real_roots());
+        }
         let bound = self.root_bound()?;
         let mut roots = Vec::new();
         isolate_bernstein(self, degree, -bound.clone(), bound, &mut roots, 0)?;
@@ -344,6 +347,17 @@ impl AlgebraicPolynomial {
             }
             radius *= BigInt::from(2);
         }
+    }
+
+    fn as_rational_polynomial(&self) -> Option<UnivariatePolynomial> {
+        self.coefficients
+            .iter()
+            .map(|coefficient| match coefficient {
+                ExactReal::Rational(value) => Some(value.clone()),
+                ExactReal::Algebraic(_) => None,
+            })
+            .collect::<Option<Vec<_>>>()
+            .map(UnivariatePolynomial::new)
     }
 }
 
