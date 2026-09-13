@@ -7,6 +7,7 @@ use crate::cad::projection::ProjectionError;
 use crate::formula::{Atom, Formula, Quantifier};
 use crate::polynomial::Monomial;
 use crate::qe::simplify::simplify;
+use num_traits::Signed;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum QuantifierEvaluationError {
@@ -105,6 +106,9 @@ fn eliminate_recursive(formula: &Formula) -> Result<Formula, QuantifierEvaluatio
         variable: *variable,
         body: Box::new(body),
     };
+    if let Some(eliminated) = eliminate_exists_linear_conjunction(&reduced, *variable) {
+        return Ok(simplify(&eliminated));
+    }
     if let Some(eliminated) = eliminate_supported_boolean_branches(*quantifier, *variable, &reduced)
     {
         return Ok(simplify(&eliminated?));
@@ -120,6 +124,55 @@ fn eliminate_recursive(formula: &Formula) -> Result<Formula, QuantifierEvaluatio
     } else {
         Err(QuantifierEvaluationError::WrongVariable)
     }
+}
+
+fn eliminate_exists_linear_conjunction(formula: &Formula, variable: usize) -> Option<Formula> {
+    let Formula::Quantified {
+        quantifier: Quantifier::Exists,
+        body,
+        ..
+    } = formula
+    else {
+        return None;
+    };
+    let Formula::And(branches) = body.as_ref() else {
+        return None;
+    };
+    let equality = branches.iter().find_map(|branch| {
+        let Formula::Atom(atom) = branch else {
+            return None;
+        };
+        if atom.relation != crate::formula::Relation::Equal || atom.polynomial.degree(variable) != 1
+        {
+            return None;
+        }
+        let leading = atom.polynomial.coefficient_in(variable, 1);
+        if leading.variables().next().is_some()
+            || !leading.evaluate(&Default::default()).is_positive()
+        {
+            return None;
+        }
+        Some((leading, atom.polynomial.coefficient_in(variable, 0)))
+    })?;
+    let (leading, equality_constant) = equality;
+    let mut conditions = Vec::new();
+    for branch in branches {
+        let Formula::Atom(atom) = branch else {
+            return None;
+        };
+        if atom.polynomial.degree(variable) == 0 {
+            conditions.push(branch.clone());
+            continue;
+        }
+        if atom.polynomial.degree(variable) != 1 {
+            return None;
+        }
+        let coefficient = atom.polynomial.coefficient_in(variable, 1);
+        let constant = atom.polynomial.coefficient_in(variable, 0);
+        let substituted = leading.clone() * constant - coefficient * equality_constant.clone();
+        conditions.push(Formula::atom(substituted, atom.relation));
+    }
+    Some(Formula::And(conditions))
 }
 
 fn eliminate_supported_boolean_branches(

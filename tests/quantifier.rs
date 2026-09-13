@@ -572,3 +572,25 @@ fn factors_variable_independent_guards_from_supported_compound_formulas() {
     assert_eq!(existential_result.evaluate(&values), Some(false));
     assert_eq!(universal_result.evaluate(&values), Some(false));
 }
+
+#[test]
+fn substitutes_positive_constant_leading_linear_equalities() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let z = Polynomial::variable(2);
+    let formula = Formula::exists(
+        1,
+        Formula::And(vec![
+            Formula::atom(y.clone() - x.clone() - z.clone(), Relation::Equal),
+            Formula::atom(y - x, Relation::Greater),
+        ]),
+    );
+    let eliminated = eliminate(&formula).unwrap();
+
+    for (z_value, expected) in [(-1, false), (0, false), (1, true)] {
+        let mut values = BTreeMap::new();
+        values.insert(0, BigRational::from_integer(2.into()));
+        values.insert(2, BigRational::from_integer(z_value.into()));
+        assert_eq!(eliminated.evaluate(&values), Some(expected));
+    }
+}

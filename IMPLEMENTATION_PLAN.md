@@ -232,6 +232,13 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Add multivariate semantic coverage for both factoring rules.
 - [x] Commit this higher-dimensional QE substep as `3aeaf26`.
 
+## Step 12a: Linear equality substitution in existential conjunctions
+
+- [x] Detect a positive constant leading coefficient equality.
+- [x] Substitute its exact root into remaining linear atoms.
+- [x] Add multivariate semantic coverage for the substitution path.
+- [ ] Commit this higher-dimensional QE substep.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`
