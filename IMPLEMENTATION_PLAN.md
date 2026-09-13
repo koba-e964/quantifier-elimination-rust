@@ -258,7 +258,7 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Normalize direct and negated linear branches for equality substitution.
 - [x] Preserve exact relation dualization during substitution.
 - [x] Add semantic coverage for a negated branch.
-- [ ] Commit this higher-dimensional QE substep.
+- [x] Commit this higher-dimensional QE substep as `2ab8355`.
 
 ## Validation required for each completed logical step
 
