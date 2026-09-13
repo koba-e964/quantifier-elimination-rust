@@ -1,5 +1,5 @@
 use crate::algebra::algebraic::AlgebraicReal;
-use crate::algebra::coefficient::{AlgebraicPolynomial, ExactReal};
+use crate::algebra::coefficient::{AlgebraicPolynomial, AlgebraicRootSample, ExactReal};
 use crate::algebra::univariate::{RootInterval, UnivariatePolynomial};
 use crate::cad::projection::{
     build_projection_stack, formula_polynomials, ProjectionError, ProjectionStack,
@@ -23,6 +23,7 @@ pub struct UnivariateCell {
     pub sample: BigRational,
     pub root: Option<RootInterval>,
     pub exact_sample: Option<AlgebraicReal>,
+    pub algebraic_root_sample: Option<AlgebraicRootSample>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -30,6 +31,7 @@ pub enum FormulaEvaluationError {
     NonUnivariatePolynomial,
     QuantifierNotSupported,
     PolynomialEvaluation(PolynomialEvaluationError),
+    AlgebraicRootSampleUnsupported,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -63,6 +65,13 @@ impl TwoDimensionalLifting {
             .zip(&self.lifted_cells)
             .map(|(base, lifted)| {
                 let mut values = std::collections::BTreeMap::new();
+                if base.algebraic_root_sample.is_some()
+                    || lifted
+                        .iter()
+                        .any(|cell| cell.algebraic_root_sample.is_some())
+                {
+                    return Err(FormulaEvaluationError::AlgebraicRootSampleUnsupported);
+                }
                 values.insert(variable_order[0], base.sample.clone());
                 lifted
                     .iter()
@@ -101,6 +110,7 @@ impl UnivariateCell {
             sample,
             root: None,
             exact_sample: None,
+            algebraic_root_sample: None,
         }
     }
 
@@ -110,6 +120,7 @@ impl UnivariateCell {
             kind: CellKind::Section,
             exact_sample: Some(AlgebraicReal::new(polynomial, root.clone())),
             root: Some(root),
+            algebraic_root_sample: None,
         }
     }
 
@@ -119,6 +130,17 @@ impl UnivariateCell {
             kind: CellKind::Section,
             root: Some(root.interval.clone()),
             exact_sample: Some(root),
+            algebraic_root_sample: None,
+        }
+    }
+
+    fn section_algebraic_root(root: AlgebraicRootSample) -> Self {
+        Self {
+            sample: (&root.interval().lower + &root.interval().upper) / BigInt::from(2),
+            kind: CellKind::Section,
+            root: Some(root.interval().clone()),
+            exact_sample: None,
+            algebraic_root_sample: Some(root),
         }
     }
 
@@ -217,6 +239,63 @@ pub fn decompose_univariate(polynomials: &[UnivariatePolynomial]) -> Vec<Univari
         }
     }
     cells
+}
+
+pub fn decompose_algebraic_univariate(
+    polynomials: &[AlgebraicPolynomial],
+) -> Result<Vec<UnivariateCell>, LiftingError> {
+    let mut roots = polynomials
+        .iter()
+        .map(AlgebraicPolynomial::isolate_root_samples)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|_| LiftingError::AlgebraicCoefficientRootUnsupported)?
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
+    let mut ordered_roots = Vec::with_capacity(roots.len());
+    for root in roots.drain(..) {
+        let mut inserted = false;
+        for index in 0..ordered_roots.len() {
+            match root
+                .compare_exact(&ordered_roots[index])
+                .map_err(|_| LiftingError::AlgebraicCoefficientRootUnsupported)?
+            {
+                std::cmp::Ordering::Less => {
+                    ordered_roots.insert(index, root.clone());
+                    inserted = true;
+                    break;
+                }
+                std::cmp::Ordering::Equal => {
+                    inserted = true;
+                    break;
+                }
+                std::cmp::Ordering::Greater => {}
+            }
+        }
+        if !inserted {
+            ordered_roots.push(root);
+        }
+    }
+    let roots = ordered_roots;
+    if roots.is_empty() {
+        return Ok(vec![UnivariateCell::sector(BigRational::zero())]);
+    }
+    let mut cells = vec![UnivariateCell::sector(
+        &roots[0].interval().lower - BigRational::from_integer(1.into()),
+    )];
+    for (index, root) in roots.iter().cloned().enumerate() {
+        cells.push(UnivariateCell::section_algebraic_root(root.clone()));
+        if let Some(next) = roots.get(index + 1) {
+            cells.push(UnivariateCell::sector(
+                (&root.interval().upper + &next.interval().lower) / BigInt::from(2),
+            ));
+        } else {
+            cells.push(UnivariateCell::sector(
+                &root.interval().upper + BigRational::from_integer(1.into()),
+            ));
+        }
+    }
+    Ok(cells)
 }
 
 fn separate_and_deduplicate_roots(roots: &mut Vec<(UnivariatePolynomial, RootInterval)>) {

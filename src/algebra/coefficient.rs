@@ -330,6 +330,14 @@ impl AlgebraicPolynomial {
         Ok(roots)
     }
 
+    pub fn isolate_root_samples(&self) -> Result<Vec<AlgebraicRootSample>, ExactRealError> {
+        Ok(self
+            .isolate_real_roots()?
+            .into_iter()
+            .map(|interval| AlgebraicRootSample::new(self.clone(), interval))
+            .collect())
+    }
+
     fn root_bound(&self) -> Result<BigRational, ExactRealError> {
         let degree = self.degree().expect("nonconstant polynomial");
         let leading = abs_exact(&self.coefficient(degree));
