@@ -83,6 +83,57 @@ fn evaluates_relations_at_supported_algebraic_root_sections() {
         lifted_section,
     )
     .unwrap());
+
+    let y = Polynomial::variable(1);
+    for (relation, expected) in [
+        (Relation::NotEqual, true),
+        (Relation::Less, false),
+        (Relation::LessOrEqual, false),
+        (Relation::GreaterOrEqual, true),
+    ] {
+        assert_eq!(
+            evaluate_formula_at_exact_lifted_cell(
+                &Formula::atom(y.clone(), relation),
+                0,
+                1,
+                base_cell,
+                lifted_section,
+            )
+            .unwrap(),
+            expected
+        );
+    }
+
+    assert!(!evaluate_formula_at_exact_lifted_cell(
+        &Formula::Not(Box::new(Formula::atom(y.clone(), Relation::Greater))),
+        0,
+        1,
+        base_cell,
+        lifted_section,
+    )
+    .unwrap());
+    assert!(evaluate_formula_at_exact_lifted_cell(
+        &Formula::And(vec![
+            Formula::atom(y.clone(), Relation::Greater),
+            Formula::atom(y.clone() * y, Relation::GreaterOrEqual),
+        ]),
+        0,
+        1,
+        base_cell,
+        lifted_section,
+    )
+    .unwrap());
+    assert!(evaluate_formula_at_exact_lifted_cell(
+        &Formula::Or(vec![
+            Formula::atom(Polynomial::variable(1), Relation::Less),
+            Formula::atom(Polynomial::variable(1), Relation::Greater),
+        ]),
+        0,
+        1,
+        base_cell,
+        lifted_section,
+    )
+    .unwrap());
 }
 
 #[test]
