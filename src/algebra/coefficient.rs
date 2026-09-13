@@ -10,6 +10,8 @@ use std::cmp::Ordering;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ExactRealError {
     AlgebraicArithmeticNotImplemented,
+    AlgebraicRootSampleComparisonUndecidable,
+    InvalidAlgebraicRootSample,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -158,6 +160,51 @@ impl AlgebraicRootSample {
 
     pub fn interval(&self) -> &RootInterval {
         &self.interval
+    }
+
+    pub fn refine(&self, maximum_width: &BigRational) -> Result<Self, ExactRealError> {
+        if maximum_width <= &BigRational::zero() || self.interval.lower >= self.interval.upper {
+            return Err(ExactRealError::InvalidAlgebraicRootSample);
+        }
+        if self.interval.width() <= *maximum_width {
+            return Ok(self.clone());
+        }
+        let mut intervals = Vec::new();
+        isolate_bernstein_to_width(
+            &self.polynomial,
+            self.polynomial
+                .degree()
+                .ok_or(ExactRealError::InvalidAlgebraicRootSample)?,
+            self.interval.lower.clone(),
+            self.interval.upper.clone(),
+            maximum_width,
+            &mut intervals,
+            0,
+        )?;
+        if intervals.len() != 1 {
+            return Err(ExactRealError::InvalidAlgebraicRootSample);
+        }
+        Ok(Self::new(self.polynomial.clone(), intervals.remove(0)))
+    }
+
+    pub fn compare_exact(&self, other: &Self) -> Result<Ordering, ExactRealError> {
+        let mut left = self.clone();
+        let mut right = other.clone();
+        for _ in 0..256 {
+            if left.interval.upper < right.interval.lower {
+                return Ok(Ordering::Less);
+            }
+            if right.interval.upper < left.interval.lower {
+                return Ok(Ordering::Greater);
+            }
+            let width = left.interval.width().min(right.interval.width()) / BigInt::from(2);
+            left = left.refine(&width)?;
+            right = right.refine(&width)?;
+        }
+        if left.polynomial == right.polynomial {
+            return Ok(Ordering::Equal);
+        }
+        Err(ExactRealError::AlgebraicRootSampleComparisonUndecidable)
     }
 }
 
@@ -342,6 +389,51 @@ fn isolate_bernstein(
         depth + 1,
     )?;
     isolate_bernstein(polynomial, degree, midpoint, upper, roots, depth + 1)
+}
+
+fn isolate_bernstein_to_width(
+    polynomial: &AlgebraicPolynomial,
+    degree: usize,
+    lower: BigRational,
+    upper: BigRational,
+    maximum_width: &BigRational,
+    roots: &mut Vec<RootInterval>,
+    depth: usize,
+) -> Result<(), ExactRealError> {
+    if depth > 256 || lower >= upper {
+        return Err(ExactRealError::InvalidAlgebraicRootSample);
+    }
+    let coefficients = bernstein_coefficients(polynomial, degree, &lower, &upper)?;
+    let variations = sign_variations(&coefficients);
+    if variations == 0 {
+        return Ok(());
+    }
+    let midpoint = (&lower + &upper) / BigInt::from(2);
+    if (&upper - &lower) <= *maximum_width {
+        roots.push(RootInterval::new(lower, upper));
+        return Ok(());
+    }
+    if midpoint == lower || midpoint == upper {
+        return Err(ExactRealError::InvalidAlgebraicRootSample);
+    }
+    isolate_bernstein_to_width(
+        polynomial,
+        degree,
+        lower,
+        midpoint.clone(),
+        maximum_width,
+        roots,
+        depth + 1,
+    )?;
+    isolate_bernstein_to_width(
+        polynomial,
+        degree,
+        midpoint,
+        upper,
+        maximum_width,
+        roots,
+        depth + 1,
+    )
 }
 
 fn bernstein_coefficients(

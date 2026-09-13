@@ -2,7 +2,7 @@ use num_rational::BigRational;
 use std::cmp::Ordering;
 
 use num_traits::Zero;
-use quantifier_elimination::{AlgebraicPolynomial, ExactReal};
+use quantifier_elimination::{AlgebraicPolynomial, AlgebraicRootSample, ExactReal};
 
 #[test]
 fn models_polynomials_with_exact_real_coefficients() {
@@ -164,6 +164,62 @@ fn isolates_roots_with_algebraic_coefficients() {
     assert_eq!(roots.len(), 1);
     assert!(roots[0].lower < BigRational::from_integer(2.into()));
     assert!(roots[0].upper > BigRational::from_integer(1.into()));
+}
+
+#[test]
+fn refines_and_compares_algebraic_coefficient_root_samples_exactly() {
+    let polynomial = AlgebraicPolynomial::new(vec![
+        ExactReal::rational(BigRational::from_integer((-2).into())),
+        ExactReal::rational(BigRational::zero()),
+        ExactReal::rational(BigRational::from_integer(1.into())),
+    ]);
+    let samples = polynomial
+        .isolate_real_roots()
+        .unwrap()
+        .into_iter()
+        .map(|interval| AlgebraicRootSample::new(polynomial.clone(), interval))
+        .collect::<Vec<_>>();
+    assert_eq!(samples.len(), 2);
+
+    let width = BigRational::new(1.into(), 16.into());
+    let refined = samples[0].refine(&width).unwrap();
+    assert!(refined.interval().width() <= width);
+    assert_eq!(samples[0].compare_exact(&refined).unwrap(), Ordering::Equal);
+    assert_eq!(
+        samples[0].compare_exact(&samples[1]).unwrap(),
+        Ordering::Less
+    );
+}
+
+#[test]
+fn reports_unresolved_common_roots_from_different_defining_polynomials() {
+    let left_polynomial = AlgebraicPolynomial::new(vec![
+        ExactReal::rational(BigRational::from_integer((-2).into())),
+        ExactReal::rational(BigRational::zero()),
+        ExactReal::rational(BigRational::from_integer(1.into())),
+    ]);
+    let right_polynomial = AlgebraicPolynomial::new(vec![
+        ExactReal::rational(BigRational::from_integer((-4).into())),
+        ExactReal::rational(BigRational::zero()),
+        ExactReal::rational(BigRational::from_integer(2.into())),
+    ]);
+    let left = AlgebraicRootSample::new(
+        left_polynomial.clone(),
+        left_polynomial.isolate_real_roots().unwrap().pop().unwrap(),
+    );
+    let right = AlgebraicRootSample::new(
+        right_polynomial.clone(),
+        right_polynomial
+            .isolate_real_roots()
+            .unwrap()
+            .pop()
+            .unwrap(),
+    );
+
+    assert_eq!(
+        left.compare_exact(&right),
+        Err(quantifier_elimination::ExactRealError::AlgebraicRootSampleComparisonUndecidable)
+    );
 }
 
 #[test]
