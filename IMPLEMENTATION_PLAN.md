@@ -272,7 +272,7 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Reduce universal conjunctions containing nonconstant linear atoms.
 - [x] Dualize universal disjunctions into exact existential bound checks.
 - [x] Add conjunction and disjunction semantic coverage.
-- [ ] Commit this higher-dimensional QE substep.
+- [x] Commit this higher-dimensional QE substep as `f3858ff`.
 
 ## Validation required for each completed logical step
 
