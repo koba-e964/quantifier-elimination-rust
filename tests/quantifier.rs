@@ -518,3 +518,25 @@ fn distributes_supported_boolean_branches_over_multiple_free_variables() {
     assert_eq!(existential_result.evaluate(&values), Some(true));
     assert_eq!(universal_result.evaluate(&values), Some(false));
 }
+
+#[test]
+fn composes_branch_distribution_across_nested_quantifiers() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let z = Polynomial::variable(2);
+    let formula = Formula::exists(
+        0,
+        Formula::exists(
+            1,
+            Formula::Or(vec![
+                Formula::atom(y.clone() + x.clone() - z.clone(), Relation::Equal),
+                Formula::atom(y - x - z, Relation::Greater),
+            ]),
+        ),
+    );
+
+    let eliminated = eliminate(&formula).unwrap();
+    let mut values = BTreeMap::new();
+    values.insert(2, BigRational::from_integer(3.into()));
+    assert_eq!(eliminated.evaluate(&values), Some(true));
+}

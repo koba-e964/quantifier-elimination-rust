@@ -214,6 +214,12 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Add compound multivariate regression coverage.
 - [x] Commit this higher-dimensional QE substep as `8734b19`.
 
+## Step 11b: Nested branch-distribution composition
+
+- [x] Compose supported Boolean distribution across two quantified variables.
+- [x] Add a nested existential regression with one remaining free variable.
+- [ ] Commit this higher-dimensional QE substep.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`
