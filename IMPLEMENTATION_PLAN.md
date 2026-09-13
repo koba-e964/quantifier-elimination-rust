@@ -197,7 +197,7 @@ logical step is completed as a unit; approval is requested before its commit.
 
 - [x] Exercise parser, elimination, and CLI formatting together.
 - [x] Verify a linear quantified formula with two free variables.
-- [ ] Commit this higher-dimensional QE substep.
+- [x] Commit this higher-dimensional QE substep as `389afa8`.
 
 ## Validation required for each completed logical step
 
