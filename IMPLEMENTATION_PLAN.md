@@ -111,6 +111,13 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Add CLI success and error integration tests.
 - [x] Obtain approval and commit the CLI substep as `7f5f90c`.
 
+## Step 8c: Parser and CLI documentation
+
+- [x] Document the accepted grammar.
+- [x] Document CLI argument and standard-input usage.
+- [x] Document unsupported syntax and current elimination limits.
+- [x] Obtain approval and commit the documentation substep as `eadc21b`.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`

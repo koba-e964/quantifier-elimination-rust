@@ -27,6 +27,26 @@ let formula = Formula::exists(
 assert_eq!(eliminate(&formula).unwrap(), Formula::False);
 ```
 
+## Parser and CLI
+
+The `qe` command accepts a formula as one argument or reads it from standard
+input:
+
+```text
+qe 'exists x0. x0^2 + 1 = 0'
+printf '%s' 'exists x0. x0 = 0' | qe
+```
+
+The initial grammar uses variables such as `x0`, integer constants, `+`, `-`,
+`*`, `^`, parentheses, comparison operators (`=`, `!=`, `<`, `<=`, `>`,
+`>=`), Boolean operators (`!`, `&&`, `||`), and quantifiers written as
+`exists x0. FORMULA` or `forall x0. FORMULA`.
+
+The CLI currently reports quantifier-free results as `true`, `false`, or a
+formula using the same comparison and Boolean syntax. Floating-point literals,
+implicit multiplication, named variables, and formulas retaining multiple free
+variables are not supported yet.
+
 ## Current scope
 
 `eliminate` currently supports closed one-variable formulas and formulas with
