@@ -37,7 +37,6 @@ pub enum FormulaEvaluationError {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum LiftingError {
     Projection(ProjectionError),
-    AlgebraicBaseSampleUnsupported,
     AlgebraicCoefficientRootUnsupported,
 }
 
@@ -356,9 +355,7 @@ pub fn lift_over_rational_sample(
     decompose_univariate(&specialized)
 }
 
-/// Build the first recursive lifting layer for a two-variable formula. Lower
-/// cells are sampled rationally until exact algebraic substitution is wired
-/// into the multivariate evaluator.
+/// Build the first recursive lifting layer for a two-variable formula.
 pub fn lift_two_variables(
     formula: &Formula,
     variable_order: &[Variable; 2],
