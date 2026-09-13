@@ -676,3 +676,33 @@ fn eliminates_existential_linear_inequality_bounds() {
         assert_eq!(eliminated.evaluate(&values), Some(expected));
     }
 }
+
+#[test]
+fn eliminates_universal_linear_conjunctions_and_disjunctions() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let z = Polynomial::variable(2);
+    let conjunction = Formula::forall(
+        1,
+        Formula::And(vec![
+            Formula::atom(y.clone() - x.clone(), Relation::Greater),
+            Formula::atom(y.clone() - z.clone(), Relation::Less),
+        ]),
+    );
+    let disjunction = Formula::forall(
+        1,
+        Formula::Or(vec![
+            Formula::atom(Polynomial::variable(1) - x, Relation::LessOrEqual),
+            Formula::atom(Polynomial::variable(1) - z, Relation::GreaterOrEqual),
+        ]),
+    );
+
+    assert_eq!(eliminate(&conjunction).unwrap(), Formula::False);
+    let eliminated = eliminate(&disjunction).unwrap();
+    let mut values = BTreeMap::new();
+    values.insert(0, BigRational::from_integer(2.into()));
+    values.insert(2, BigRational::from_integer(1.into()));
+    assert_eq!(eliminated.evaluate(&values), Some(true));
+    values.insert(2, BigRational::from_integer(3.into()));
+    assert_eq!(eliminated.evaluate(&values), Some(false));
+}

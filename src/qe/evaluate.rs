@@ -109,6 +109,9 @@ fn eliminate_recursive(formula: &Formula) -> Result<Formula, QuantifierEvaluatio
     if let Some(eliminated) = eliminate_forall_linear_equality(&reduced, *variable) {
         return Ok(eliminated);
     }
+    if let Some(eliminated) = eliminate_forall_linear_conjunction(&reduced, *variable) {
+        return Ok(eliminated);
+    }
     if let Some(eliminated) = eliminate_exists_linear_conjunction(&reduced, *variable) {
         return Ok(simplify(&eliminated));
     }
@@ -154,6 +157,31 @@ fn eliminate_forall_linear_equality(formula: &Formula, variable: usize) -> Optio
         }
         let leading = atom.polynomial.coefficient_in(variable, 1);
         if leading.variables().next().is_some() || leading.is_zero() {
+            return None;
+        }
+        Some(Formula::False)
+    })
+}
+
+fn eliminate_forall_linear_conjunction(formula: &Formula, variable: usize) -> Option<Formula> {
+    let Formula::Quantified {
+        quantifier: Quantifier::Forall,
+        body,
+        ..
+    } = formula
+    else {
+        return None;
+    };
+    let Formula::And(branches) = body.as_ref() else {
+        return None;
+    };
+    branches.iter().find_map(|branch| {
+        let atom = atom_with_negated_relation(branch)?;
+        let coefficient = atom.polynomial.coefficient_in(variable, 1);
+        if atom.polynomial.degree(variable) != 1
+            || coefficient.variables().next().is_some()
+            || coefficient.is_zero()
+        {
             return None;
         }
         Some(Formula::False)
@@ -341,7 +369,20 @@ fn eliminate_supported_boolean_branches(
                 .iter()
                 .cloned()
                 .partition(|branch| !branch.free_variables().contains(&variable));
-            if independent.is_empty() || dependent.is_empty() {
+            if independent.is_empty() {
+                let negated = Formula::And(
+                    branches
+                        .iter()
+                        .cloned()
+                        .map(|branch| Formula::Not(Box::new(branch)))
+                        .collect(),
+                );
+                let quantified = Formula::exists(variable, negated);
+                return Some(
+                    eliminate_recursive(&quantified).map(|result| Formula::Not(Box::new(result))),
+                );
+            }
+            if dependent.is_empty() {
                 return None;
             }
             let guard = simplify(&Formula::Or(independent));
