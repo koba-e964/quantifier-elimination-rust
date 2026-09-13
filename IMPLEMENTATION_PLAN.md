@@ -50,6 +50,13 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Replace structural equality with semantic equality where required.
 - [x] Obtain approval and commit the complete Step 6 change as `33fce3c`.
 
+## Step 7a: Recursive nested-quantifier dispatch
+
+- [x] Recursively eliminate inner quantifiers before the enclosing quantifier.
+- [x] Preserve Boolean structure while reducing nested quantified children.
+- [x] Add a semantic nested-quantifier regression test.
+- [x] Obtain approval and commit this Step 7a change as `da21133`.
+
 ## Step 7: Quantifier elimination extensions
 
 - [ ] Support recursive lifting for multiple quantified variables.

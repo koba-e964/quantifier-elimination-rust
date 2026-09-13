@@ -78,17 +78,56 @@ pub fn eliminate_univariate(formula: &Formula) -> Result<Formula, QuantifierEval
 /// with one quantified variable plus one free variable. General multivariate
 /// formula synthesis is not enabled yet.
 pub fn eliminate(formula: &Formula) -> Result<Formula, QuantifierEvaluationError> {
-    let Formula::Quantified { variable, .. } = formula else {
+    if !matches!(formula, Formula::Quantified { .. }) {
         return Err(QuantifierEvaluationError::WrongVariable);
+    }
+    eliminate_recursive(formula)
+}
+
+fn eliminate_recursive(formula: &Formula) -> Result<Formula, QuantifierEvaluationError> {
+    let Formula::Quantified {
+        quantifier,
+        variable,
+        body,
+    } = formula
+    else {
+        return Err(QuantifierEvaluationError::WrongVariable);
+    };
+
+    let body = eliminate_nested_children(body)?;
+    let reduced = Formula::Quantified {
+        quantifier: *quantifier,
+        variable: *variable,
+        body: Box::new(body),
     };
     let free_variables = formula.free_variables();
     if free_variables.is_empty() {
-        eliminate_univariate(formula)
+        eliminate_univariate(&reduced)
     } else if free_variables.len() == 1 {
-        eliminate_one_variable(formula, *free_variables.first().unwrap(), *variable)
+        eliminate_one_variable(&reduced, *free_variables.first().unwrap(), *variable)
     } else {
         Err(QuantifierEvaluationError::WrongVariable)
     }
+}
+
+fn eliminate_nested_children(formula: &Formula) -> Result<Formula, QuantifierEvaluationError> {
+    Ok(match formula {
+        Formula::True | Formula::False | Formula::Atom(_) => formula.clone(),
+        Formula::Not(body) => Formula::Not(Box::new(eliminate_nested_children(body)?)),
+        Formula::And(formulas) => Formula::And(
+            formulas
+                .iter()
+                .map(eliminate_nested_children)
+                .collect::<Result<_, _>>()?,
+        ),
+        Formula::Or(formulas) => Formula::Or(
+            formulas
+                .iter()
+                .map(eliminate_nested_children)
+                .collect::<Result<_, _>>()?,
+        ),
+        Formula::Quantified { .. } => eliminate_recursive(formula)?,
+    })
 }
 
 /// Eliminate one quantified variable from a formula with exactly one free

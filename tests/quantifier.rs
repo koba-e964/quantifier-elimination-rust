@@ -190,6 +190,16 @@ fn dispatches_supported_elimination_paths() {
 }
 
 #[test]
+fn recursively_eliminates_nested_quantifiers() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let body = Formula::atom(x.clone() * x + y.clone() * y, Relation::GreaterOrEqual);
+    let formula = Formula::exists(0, Formula::forall(1, body));
+
+    assert_eq!(eliminate(&formula).unwrap(), Formula::True);
+}
+
+#[test]
 fn eliminates_boolean_combinations_and_strict_inequalities() {
     let x = Polynomial::variable(0);
     let y = Polynomial::variable(1);
