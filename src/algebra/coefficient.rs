@@ -1,4 +1,8 @@
-use super::{algebraic::AlgebraicReal, univariate::UnivariatePolynomial};
+use super::{
+    algebraic::AlgebraicReal,
+    univariate::{RootInterval, UnivariatePolynomial},
+};
+use num_bigint::BigInt;
 use num_rational::BigRational;
 use num_traits::Zero;
 use std::cmp::Ordering;
@@ -134,6 +138,29 @@ pub struct AlgebraicPolynomial {
     coefficients: Vec<ExactReal>,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AlgebraicRootSample {
+    polynomial: AlgebraicPolynomial,
+    interval: RootInterval,
+}
+
+impl AlgebraicRootSample {
+    pub fn new(polynomial: AlgebraicPolynomial, interval: RootInterval) -> Self {
+        Self {
+            polynomial,
+            interval,
+        }
+    }
+
+    pub fn polynomial(&self) -> &AlgebraicPolynomial {
+        &self.polynomial
+    }
+
+    pub fn interval(&self) -> &RootInterval {
+        &self.interval
+    }
+}
+
 impl AlgebraicPolynomial {
     pub fn zero() -> Self {
         Self {
@@ -239,4 +266,128 @@ impl AlgebraicPolynomial {
             ),
         }))
     }
+
+    pub fn isolate_real_roots(&self) -> Result<Vec<RootInterval>, ExactRealError> {
+        let Some(degree) = self.degree() else {
+            return Ok(Vec::new());
+        };
+        if degree == 0 {
+            return Ok(Vec::new());
+        }
+        let bound = self.root_bound()?;
+        let mut roots = Vec::new();
+        isolate_bernstein(self, degree, -bound.clone(), bound, &mut roots, 0)?;
+        Ok(roots)
+    }
+
+    fn root_bound(&self) -> Result<BigRational, ExactRealError> {
+        let degree = self.degree().expect("nonconstant polynomial");
+        let leading = abs_exact(&self.coefficient(degree));
+        let mut radius = BigRational::from_integer(1.into());
+        loop {
+            let lhs = leading.try_mul_rational(&radius.pow(degree as i32));
+            let mut rhs = ExactReal::rational(BigRational::zero());
+            for index in 0..degree {
+                let term =
+                    abs_exact(&self.coefficient(index)).try_mul_rational(&radius.pow(index as i32));
+                rhs = rhs.try_add(&term)?;
+            }
+            if lhs.compare(&rhs) == Ordering::Greater {
+                return Ok(radius + BigRational::from_integer(1.into()));
+            }
+            radius *= BigInt::from(2);
+        }
+    }
+}
+
+fn abs_exact(value: &ExactReal) -> ExactReal {
+    if value.sign() == Ordering::Less {
+        value.negated()
+    } else {
+        value.clone()
+    }
+}
+
+fn isolate_bernstein(
+    polynomial: &AlgebraicPolynomial,
+    degree: usize,
+    lower: BigRational,
+    upper: BigRational,
+    roots: &mut Vec<RootInterval>,
+    depth: usize,
+) -> Result<(), ExactRealError> {
+    if depth > 128 || lower == upper {
+        return Ok(());
+    }
+    let coefficients = bernstein_coefficients(polynomial, degree, &lower, &upper)?;
+    let variations = sign_variations(&coefficients);
+    if variations == 0 {
+        return Ok(());
+    }
+    if variations == 1 {
+        roots.push(RootInterval::new(lower, upper));
+        return Ok(());
+    }
+    let midpoint = (&lower + &upper) / BigInt::from(2);
+    if midpoint == lower || midpoint == upper {
+        roots.push(RootInterval::new(lower, upper));
+        return Ok(());
+    }
+    isolate_bernstein(
+        polynomial,
+        degree,
+        lower,
+        midpoint.clone(),
+        roots,
+        depth + 1,
+    )?;
+    isolate_bernstein(polynomial, degree, midpoint, upper, roots, depth + 1)
+}
+
+fn bernstein_coefficients(
+    polynomial: &AlgebraicPolynomial,
+    degree: usize,
+    lower: &BigRational,
+    upper: &BigRational,
+) -> Result<Vec<ExactReal>, ExactRealError> {
+    let affine = AlgebraicPolynomial::new(vec![
+        ExactReal::rational(lower.clone()),
+        ExactReal::rational(upper - lower),
+    ]);
+    let mut power = AlgebraicPolynomial::zero();
+    for index in (0..=degree).rev() {
+        power = power.try_mul(&affine)?;
+        power = power.try_add(&AlgebraicPolynomial::new(vec![
+            polynomial.coefficient(index)
+        ]))?;
+    }
+    let mut result = Vec::with_capacity(degree + 1);
+    for k in 0..=degree {
+        let mut coefficient = ExactReal::rational(BigRational::zero());
+        for index in 0..=k {
+            let factor = BigRational::from_integer(binomial(k, index).into())
+                / BigRational::from_integer(binomial(degree, index).into());
+            coefficient =
+                coefficient.try_add(&power.coefficient(index).try_mul_rational(&factor))?;
+        }
+        result.push(coefficient);
+    }
+    Ok(result)
+}
+
+fn sign_variations(coefficients: &[ExactReal]) -> usize {
+    coefficients
+        .iter()
+        .map(ExactReal::sign)
+        .filter(|sign| *sign != Ordering::Equal)
+        .collect::<Vec<_>>()
+        .windows(2)
+        .filter(|pair| pair[0] != pair[1])
+        .count()
+}
+
+fn binomial(n: usize, k: usize) -> i64 {
+    (0..k).fold(1_i64, |value, index| {
+        value * (n - index) as i64 / (index + 1) as i64
+    })
 }

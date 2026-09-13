@@ -146,6 +146,27 @@ fn evaluates_and_differentiates_algebraic_coefficient_polynomials() {
 }
 
 #[test]
+fn isolates_roots_with_algebraic_coefficients() {
+    let root = ExactReal::algebraic(quantifier_elimination::AlgebraicReal::new(
+        quantifier_elimination::UnivariatePolynomial::from_integers(&[-2, 0, 1]),
+        quantifier_elimination::RootInterval::new(
+            BigRational::from_integer(1.into()),
+            BigRational::from_integer(2.into()),
+        ),
+    ));
+    let polynomial = AlgebraicPolynomial::new(vec![
+        root.negated(),
+        ExactReal::rational(BigRational::from_integer(1.into())),
+    ]);
+    let roots = polynomial.isolate_real_roots().unwrap();
+
+    // x - sqrt(2) has one real root between 1 and 2.
+    assert_eq!(roots.len(), 1);
+    assert!(roots[0].lower < BigRational::from_integer(2.into()));
+    assert!(roots[0].upper > BigRational::from_integer(1.into()));
+}
+
+#[test]
 fn performs_exact_mixed_rational_algebraic_arithmetic() {
     let root = ExactReal::algebraic(quantifier_elimination::AlgebraicReal::new(
         quantifier_elimination::UnivariatePolynomial::from_integers(&[-2, 0, 1]),
