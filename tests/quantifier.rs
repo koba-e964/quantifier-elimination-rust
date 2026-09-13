@@ -372,3 +372,27 @@ fn simplifies_dead_multivariate_quantifier_branches_before_dispatch() {
         Formula::True
     );
 }
+
+#[test]
+fn eliminates_nested_closed_quantifiers_after_recursive_dispatch() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+
+    let true_formula = Formula::exists(
+        0,
+        Formula::forall(
+            1,
+            Formula::atom(
+                y.clone() * y.clone() + x.clone() * x.clone() - Polynomial::integer(1),
+                Relation::GreaterOrEqual,
+            ),
+        ),
+    );
+    assert_eq!(eliminate(&true_formula).unwrap(), Formula::True);
+
+    let false_formula = Formula::forall(
+        0,
+        Formula::exists(1, Formula::atom(y.clone() * y - x, Relation::Equal)),
+    );
+    assert_eq!(eliminate(&false_formula).unwrap(), Formula::False);
+}

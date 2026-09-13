@@ -166,6 +166,13 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Add existential and universal multivariate regression coverage.
 - [x] Commit this higher-dimensional QE substep as `d5f58c9`.
 
+## Step 10c: Nested closed-quantifier regression coverage
+
+- [x] Cover recursive elimination across two quantified variables.
+- [x] Cover existential/universal nesting that reduces to true.
+- [x] Cover universal/existential nesting that reduces to false.
+- [ ] Commit this higher-dimensional QE substep.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`
