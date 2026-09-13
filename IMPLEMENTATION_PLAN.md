@@ -69,7 +69,14 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Confirm the current two-variable lifting/synthesis boundary.
 - [x] Document rejection of formulas with multiple free variables.
 - [x] Retain the explicit multivariate-rejection regression test.
-- [x] Obtain approval and commit this Step 7c change as `ffbbbdc`.
+- [x] Obtain approval and commit this Step 7c change as `f6305b3`.
+
+## Step 7d: Boolean synthesis normalization
+
+- [x] Collapse singleton cell conditions to atoms.
+- [x] Collapse singleton synthesized disjunctions to their condition.
+- [x] Add a formula-shape regression test.
+- [x] Obtain approval and commit this Step 7d change as `b05abd2`.
 
 ## Step 7: Quantifier elimination extensions
 

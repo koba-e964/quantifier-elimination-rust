@@ -669,7 +669,7 @@ pub fn cell_condition(
     polynomials: &[UnivariatePolynomial],
     variable: Variable,
 ) -> Formula {
-    let atoms = polynomials
+    let atoms: Vec<_> = polynomials
         .iter()
         .map(|polynomial| {
             let relation = match cell.sign_of(polynomial) {
@@ -680,7 +680,11 @@ pub fn cell_condition(
             Formula::atom(Polynomial::from_univariate(variable, polynomial), relation)
         })
         .collect();
-    Formula::And(atoms)
+    match atoms.len() {
+        0 => Formula::True,
+        1 => atoms.into_iter().next().unwrap(),
+        _ => Formula::And(atoms),
+    }
 }
 
 pub fn synthesize_cell_conditions(
@@ -702,7 +706,11 @@ pub fn synthesize_cell_conditions(
         .filter(|(_, truth)| **truth)
         .map(|(cell, _)| cell_condition(cell, polynomials, variable))
         .collect::<Vec<_>>();
-    Formula::Or(conditions)
+    match conditions.len() {
+        0 => Formula::False,
+        1 => conditions.into_iter().next().unwrap(),
+        _ => Formula::Or(conditions),
+    }
 }
 
 fn specialize_to_univariate(

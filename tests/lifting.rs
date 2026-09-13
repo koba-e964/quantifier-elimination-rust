@@ -312,3 +312,12 @@ fn synthesizes_a_quantifier_free_formula_from_true_cells() {
         .collect::<Vec<_>>();
     assert_eq!(evaluated, truth_values);
 }
+
+#[test]
+fn simplifies_single_atom_cell_conditions() {
+    let polynomial = UnivariatePolynomial::from_integers(&[-1, 1]);
+    let cells = decompose_univariate(std::slice::from_ref(&polynomial));
+    let condition = cell_condition(&cells[0], std::slice::from_ref(&polynomial), 0);
+
+    assert!(matches!(condition, Formula::Atom(_)));
+}
