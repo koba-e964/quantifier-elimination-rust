@@ -173,6 +173,13 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Cover universal/existential nesting that reduces to false.
 - [x] Commit this higher-dimensional QE substep as `73368d5`.
 
+## Step 10d: Linear atomic multivariate elimination
+
+- [x] Extract quantified-variable coefficients for linear atomic formulas.
+- [x] Eliminate all six relation kinds for existential and universal quantifiers.
+- [x] Add semantic coverage with two remaining free variables.
+- [ ] Commit this higher-dimensional QE substep.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`

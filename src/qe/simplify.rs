@@ -1,9 +1,29 @@
-use crate::formula::Formula;
+use crate::formula::{Formula, Relation};
+use num_traits::Zero;
+use std::collections::BTreeMap;
 
-/// Simplify Boolean structure without changing polynomial atoms.
+/// Simplify Boolean structure and evaluate variable-free polynomial atoms.
 pub fn simplify(formula: &Formula) -> Formula {
     match formula {
-        Formula::True | Formula::False | Formula::Atom(_) => formula.clone(),
+        Formula::True | Formula::False => formula.clone(),
+        Formula::Atom(atom) if atom.polynomial.variables().next().is_none() => {
+            let value = atom.polynomial.evaluate(&BTreeMap::new());
+            let zero = num_rational::BigRational::zero();
+            let result = match atom.relation {
+                Relation::Equal => value == zero,
+                Relation::NotEqual => value != zero,
+                Relation::Less => value < zero,
+                Relation::LessOrEqual => value <= zero,
+                Relation::Greater => value > zero,
+                Relation::GreaterOrEqual => value >= zero,
+            };
+            if result {
+                Formula::True
+            } else {
+                Formula::False
+            }
+        }
+        Formula::Atom(_) => formula.clone(),
         Formula::Not(body) => match simplify(body) {
             Formula::True => Formula::False,
             Formula::False => Formula::True,

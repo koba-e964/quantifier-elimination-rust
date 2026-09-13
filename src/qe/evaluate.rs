@@ -105,6 +105,9 @@ fn eliminate_recursive(formula: &Formula) -> Result<Formula, QuantifierEvaluatio
         variable: *variable,
         body: Box::new(body),
     };
+    if let Some(eliminated) = eliminate_linear_atom(&reduced, *variable) {
+        return Ok(simplify(&eliminated));
+    }
     let free_variables = formula.free_variables();
     if free_variables.is_empty() {
         eliminate_univariate(&reduced)
@@ -113,6 +116,81 @@ fn eliminate_recursive(formula: &Formula) -> Result<Formula, QuantifierEvaluatio
     } else {
         Err(QuantifierEvaluationError::WrongVariable)
     }
+}
+
+fn eliminate_linear_atom(formula: &Formula, variable: usize) -> Option<Formula> {
+    let Formula::Quantified {
+        quantifier, body, ..
+    } = formula
+    else {
+        return None;
+    };
+    let Formula::Atom(atom) = body.as_ref() else {
+        return None;
+    };
+    let polynomial = &atom.polynomial;
+    if polynomial.degree(variable) != 1 {
+        return None;
+    }
+    let leading = polynomial.coefficient_in(variable, 1);
+    let constant = polynomial.coefficient_in(variable, 0);
+    let leading_zero = Formula::atom(leading.clone(), crate::formula::Relation::Equal);
+    let leading_nonzero = Formula::atom(leading, crate::formula::Relation::NotEqual);
+    let constant_relation = |relation| Formula::atom(constant.clone(), relation);
+    let result = match (quantifier, atom.relation) {
+        (Quantifier::Exists, crate::formula::Relation::Equal) => Formula::Or(vec![
+            Formula::And(vec![
+                leading_zero,
+                constant_relation(crate::formula::Relation::Equal),
+            ]),
+            leading_nonzero,
+        ]),
+        (Quantifier::Exists, crate::formula::Relation::NotEqual) => Formula::Or(vec![
+            leading_nonzero,
+            constant_relation(crate::formula::Relation::NotEqual),
+        ]),
+        (Quantifier::Exists, crate::formula::Relation::Less) => Formula::Or(vec![
+            leading_nonzero,
+            constant_relation(crate::formula::Relation::Less),
+        ]),
+        (Quantifier::Exists, crate::formula::Relation::LessOrEqual) => Formula::Or(vec![
+            leading_nonzero,
+            constant_relation(crate::formula::Relation::LessOrEqual),
+        ]),
+        (Quantifier::Exists, crate::formula::Relation::Greater) => Formula::Or(vec![
+            leading_nonzero,
+            constant_relation(crate::formula::Relation::Greater),
+        ]),
+        (Quantifier::Exists, crate::formula::Relation::GreaterOrEqual) => Formula::Or(vec![
+            leading_nonzero,
+            constant_relation(crate::formula::Relation::GreaterOrEqual),
+        ]),
+        (Quantifier::Forall, crate::formula::Relation::Equal) => Formula::And(vec![
+            leading_zero,
+            constant_relation(crate::formula::Relation::Equal),
+        ]),
+        (Quantifier::Forall, crate::formula::Relation::NotEqual) => Formula::And(vec![
+            leading_zero,
+            constant_relation(crate::formula::Relation::NotEqual),
+        ]),
+        (Quantifier::Forall, crate::formula::Relation::Less) => Formula::And(vec![
+            leading_zero,
+            constant_relation(crate::formula::Relation::Less),
+        ]),
+        (Quantifier::Forall, crate::formula::Relation::LessOrEqual) => Formula::And(vec![
+            leading_zero,
+            constant_relation(crate::formula::Relation::LessOrEqual),
+        ]),
+        (Quantifier::Forall, crate::formula::Relation::Greater) => Formula::And(vec![
+            leading_zero,
+            constant_relation(crate::formula::Relation::Greater),
+        ]),
+        (Quantifier::Forall, crate::formula::Relation::GreaterOrEqual) => Formula::And(vec![
+            leading_zero,
+            constant_relation(crate::formula::Relation::GreaterOrEqual),
+        ]),
+    };
+    Some(result)
 }
 
 fn eliminate_nested_children(formula: &Formula) -> Result<Formula, QuantifierEvaluationError> {

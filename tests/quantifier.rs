@@ -328,7 +328,7 @@ fn reports_unsupported_elimination_shapes() {
     let x = Polynomial::variable(0);
     let y = Polynomial::variable(1);
     let z = Polynomial::variable(2);
-    let formula = Formula::exists(1, Formula::atom(x + y + z, Relation::Equal));
+    let formula = Formula::exists(1, Formula::atom(y.clone() * y + x + z, Relation::Equal));
     assert_eq!(
         quantifier_elimination::eliminate(&formula),
         Err(QuantifierEvaluationError::WrongVariable)
@@ -395,4 +395,26 @@ fn eliminates_nested_closed_quantifiers_after_recursive_dispatch() {
         Formula::exists(1, Formula::atom(y.clone() * y - x, Relation::Equal)),
     );
     assert_eq!(eliminate(&false_formula).unwrap(), Formula::False);
+}
+
+#[test]
+fn eliminates_linear_atomic_formulas_with_multiple_free_variables() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let z = Polynomial::variable(2);
+    let formula = Formula::exists(
+        1,
+        Formula::atom(
+            (x.clone() + z.clone()) * y - Polynomial::integer(1),
+            Relation::Equal,
+        ),
+    );
+    let eliminated = eliminate(&formula).unwrap();
+
+    for (x_value, z_value, expected) in [(0, 1, true), (1, -1, false), (2, 3, true)] {
+        let mut values = BTreeMap::new();
+        values.insert(0, BigRational::from_integer(x_value.into()));
+        values.insert(2, BigRational::from_integer(z_value.into()));
+        assert_eq!(eliminated.evaluate(&values), Some(expected));
+    }
 }
