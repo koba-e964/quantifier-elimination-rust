@@ -199,6 +199,13 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Verify a linear quantified formula with two free variables.
 - [x] Commit this higher-dimensional QE substep as `389afa8`.
 
+## Step 10h: Negated linear atomic elimination
+
+- [x] Recognize negated linear atomic formulas.
+- [x] Dualize all relation kinds exactly.
+- [x] Add multivariate semantic regression coverage.
+- [ ] Commit this higher-dimensional QE substep.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`

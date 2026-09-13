@@ -464,3 +464,25 @@ fn covers_all_linear_relation_quantifiers_with_multiple_free_variables() {
         assert_eq!(universal.evaluate(&zero_leading), Some(expected));
     }
 }
+
+#[test]
+fn eliminates_negated_linear_atoms_with_multiple_free_variables() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let z = Polynomial::variable(2);
+    let formula = Formula::exists(
+        1,
+        Formula::Not(Box::new(Formula::atom(
+            (x.clone() + z.clone()) * y - Polynomial::integer(1),
+            Relation::Less,
+        ))),
+    );
+    let eliminated = eliminate(&formula).unwrap();
+
+    for (x_value, z_value, expected) in [(0, 1, true), (1, -1, false), (2, 3, true)] {
+        let mut values = BTreeMap::new();
+        values.insert(0, BigRational::from_integer(x_value.into()));
+        values.insert(2, BigRational::from_integer(z_value.into()));
+        assert_eq!(eliminated.evaluate(&values), Some(expected));
+    }
+}

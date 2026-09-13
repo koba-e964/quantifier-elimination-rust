@@ -125,8 +125,15 @@ fn eliminate_linear_atom(formula: &Formula, variable: usize) -> Option<Formula> 
     else {
         return None;
     };
-    let Formula::Atom(atom) = body.as_ref() else {
-        return None;
+    let atom = match body.as_ref() {
+        Formula::Atom(atom) => atom.clone(),
+        Formula::Not(inner) => {
+            let Formula::Atom(atom) = inner.as_ref() else {
+                return None;
+            };
+            Atom::new(atom.polynomial.clone(), negate_relation(atom.relation))
+        }
+        _ => return None,
     };
     let polynomial = &atom.polynomial;
     if polynomial.degree(variable) != 1 {
@@ -191,6 +198,17 @@ fn eliminate_linear_atom(formula: &Formula, variable: usize) -> Option<Formula> 
         ]),
     };
     Some(result)
+}
+
+fn negate_relation(relation: crate::formula::Relation) -> crate::formula::Relation {
+    match relation {
+        crate::formula::Relation::Equal => crate::formula::Relation::NotEqual,
+        crate::formula::Relation::NotEqual => crate::formula::Relation::Equal,
+        crate::formula::Relation::Less => crate::formula::Relation::GreaterOrEqual,
+        crate::formula::Relation::LessOrEqual => crate::formula::Relation::Greater,
+        crate::formula::Relation::Greater => crate::formula::Relation::LessOrEqual,
+        crate::formula::Relation::GreaterOrEqual => crate::formula::Relation::Less,
+    }
 }
 
 fn eliminate_nested_children(formula: &Formula) -> Result<Formula, QuantifierEvaluationError> {
