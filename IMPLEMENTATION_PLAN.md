@@ -204,7 +204,7 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Recognize negated linear atomic formulas.
 - [x] Dualize all relation kinds exactly.
 - [x] Add multivariate semantic regression coverage.
-- [ ] Commit this higher-dimensional QE substep.
+- [x] Commit this higher-dimensional QE substep as `922a58f`.
 
 ## Validation required for each completed logical step
 
