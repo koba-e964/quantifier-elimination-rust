@@ -124,21 +124,27 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Detect common roots from different rational defining polynomials with an exact gcd.
 - [x] Handle overlapping intervals and endpoint roots without midpoint fallback.
 - [x] Add regression coverage for scaled defining polynomials.
-- [x] Commit this root-sample hardening substep as `784de0f`.
+- [x] Commit this root-sample hardening substep as `05fae6f`.
 
 ## Step 9b: Endpoint-aware algebraic root refinement
 
 - [x] Detect exact roots on isolating interval boundaries.
 - [x] Refine boundary roots toward the endpoint without dropping them.
 - [x] Add endpoint refinement regression coverage.
-- [x] Commit this root-sample hardening substep as `05766c9`.
+- [x] Commit this root-sample hardening substep as `8fce56a`.
 
 ## Step 9c: Repeated algebraic-coefficient roots
 
 - [x] Detect repeated quadratic roots through exact derivative evaluation.
 - [x] Isolate the repeated `√2` root without relying on sign variation.
 - [x] Add regression coverage for an even-multiplicity algebraic root.
-- [x] Commit this root-sample hardening substep as `721872e`.
+- [x] Commit this root-sample hardening substep as `3bac0a0`.
+
+## Step 9e: No-real-root algebraic coverage
+
+- [x] Cover a positive algebraic constant with no real quadratic roots.
+- [x] Preserve the exact empty-root result.
+- [x] Commit this root-isolation coverage substep as `273e7ce`.
 
 ## Step 9d: Arbitrary-degree algebraic root coverage
 
