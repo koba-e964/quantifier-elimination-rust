@@ -223,7 +223,7 @@ logical step is completed as a unit; approval is requested before its commit.
 ## Step 11c: QE boundary comment audit
 
 - [x] Align public dispatch documentation with the supported multivariate cases.
-- [ ] Commit this documentation substep.
+- [x] Commit this documentation substep as `3f94333`.
 
 ## Validation required for each completed logical step
 
