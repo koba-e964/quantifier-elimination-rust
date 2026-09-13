@@ -265,7 +265,7 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Convert constant-coefficient linear atoms into exact lower/upper bounds.
 - [x] Preserve strict and non-strict bound comparisons.
 - [x] Add semantic coverage for feasible and infeasible intervals.
-- [ ] Commit this higher-dimensional QE substep.
+- [x] Commit this higher-dimensional QE substep as `950eef9`.
 
 ## Validation required for each completed logical step
 
