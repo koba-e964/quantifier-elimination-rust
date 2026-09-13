@@ -39,15 +39,16 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Add an end-to-end quantified quadratic example over an irrational base section.
 - [x] Remove the obsolete `AlgebraicBaseSampleUnsupported` error.
 - [x] Update README scope and remaining limitation documentation.
-- [x] Obtain approval and commit the complete Step 5 change as `c9cb9c9`.
+- [x] Obtain approval and commit the complete Step 5 change as `d70b725`.
 
 ## Step 6: Normalization and canonicalization
 
-- [ ] Square-free defining-polynomial normalization where practical.
-- [ ] Normalize leading coefficients.
-- [ ] Collapse proven rational `ExactReal` results.
-- [ ] Preserve and test exact-cancellation fast paths.
-- [ ] Replace structural equality where semantic equality is required.
+- [x] Add reusable square-free and monic normalization for rational polynomials.
+- [x] Normalize operation-derived defining polynomials where practical.
+- [x] Collapse proven rational `ExactReal` results, including endpoint roots.
+- [x] Preserve and test exact-cancellation fast paths.
+- [x] Replace structural equality with semantic equality where required.
+- [x] Obtain approval and commit the complete Step 6 change as `33fce3c`.
 
 ## Step 7: Quantifier elimination extensions
 

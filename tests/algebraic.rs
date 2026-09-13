@@ -298,3 +298,43 @@ fn performs_exact_algebraic_algebraic_arithmetic() {
     // sqrt(2) * sqrt(2) = 2.
     assert_eq!(root.try_mul(&root).unwrap().compare(&two), Ordering::Equal);
 }
+
+#[test]
+fn normalizes_algebraic_definitions_and_collapses_rational_roots() {
+    let repeated_definition =
+        quantifier_elimination::UnivariatePolynomial::from_integers(&[4, -8, 4]);
+    let root = quantifier_elimination::AlgebraicReal::new(
+        repeated_definition,
+        quantifier_elimination::RootInterval::new(
+            BigRational::from_integer(0.into()),
+            BigRational::from_integer(2.into()),
+        ),
+    );
+
+    assert_eq!(root.polynomial.square_free_part().to_string(), "x - 1");
+    assert_eq!(
+        ExactReal::algebraic(root),
+        ExactReal::rational(BigRational::from_integer(1.into()))
+    );
+}
+
+#[test]
+fn cancels_semantically_equal_algebraic_values_with_different_intervals() {
+    let polynomial = quantifier_elimination::UnivariatePolynomial::from_integers(&[-2, 0, 1]);
+    let left = ExactReal::algebraic(quantifier_elimination::AlgebraicReal::new(
+        polynomial.clone(),
+        quantifier_elimination::RootInterval::new(
+            BigRational::from_integer(1.into()),
+            BigRational::from_integer(2.into()),
+        ),
+    ));
+    let right = ExactReal::algebraic(quantifier_elimination::AlgebraicReal::new(
+        polynomial,
+        quantifier_elimination::RootInterval::new(
+            BigRational::new(7.into(), 5.into()),
+            BigRational::new(3.into(), 2.into()),
+        ),
+    ));
+
+    assert_eq!(left.try_sub(&right).unwrap().sign(), Ordering::Equal);
+}

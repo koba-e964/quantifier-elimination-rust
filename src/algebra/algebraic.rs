@@ -104,7 +104,12 @@ impl AlgebraicReal {
 
     pub fn rational_value(&self) -> Option<num_rational::BigRational> {
         let midpoint = (&self.interval.lower + &self.interval.upper) / num_bigint::BigInt::from(2);
-        (self.polynomial.evaluate(&midpoint).is_zero()).then_some(midpoint)
+        for value in [&self.interval.lower, &self.interval.upper, &midpoint] {
+            if self.polynomial.evaluate(value).is_zero() {
+                return Some(value.clone());
+            }
+        }
+        None
     }
 
     pub fn sign_of(&self, polynomial: &UnivariatePolynomial) -> i8 {

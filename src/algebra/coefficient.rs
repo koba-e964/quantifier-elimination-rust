@@ -26,7 +26,10 @@ impl ExactReal {
     }
 
     pub fn algebraic(value: AlgebraicReal) -> Self {
-        Self::Algebraic(value)
+        match value.rational_value() {
+            Some(rational) => Self::Rational(rational),
+            None => Self::Algebraic(value),
+        }
     }
 
     pub fn is_zero(&self) -> bool {
@@ -58,7 +61,7 @@ impl ExactReal {
             }
             (Self::Algebraic(left), Self::Algebraic(right)) => {
                 let negated = right.negated();
-                if left == &negated {
+                if left.compare(&negated) == Ordering::Equal {
                     Ok(Self::Rational(BigRational::zero()))
                 } else {
                     left.add_algebraic(right)
@@ -78,7 +81,9 @@ impl ExactReal {
             (Self::Rational(left), Self::Algebraic(right)) => {
                 Ok(Self::Algebraic(right.negated().add_rational(left)))
             }
-            (Self::Algebraic(left), Self::Algebraic(right)) if left == right => {
+            (Self::Algebraic(left), Self::Algebraic(right))
+                if left.compare(right) == Ordering::Equal =>
+            {
                 Ok(Self::Rational(BigRational::zero()))
             }
             (Self::Algebraic(left), Self::Algebraic(right)) => left

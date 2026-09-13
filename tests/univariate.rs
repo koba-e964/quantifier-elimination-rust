@@ -30,6 +30,16 @@ fn sturm_handles_no_real_roots() {
 }
 
 #[test]
+fn normalizes_polynomials_to_square_free_monic_form() {
+    let polynomial = UnivariatePolynomial::from_integers(&[4, -8, 4]);
+
+    assert_eq!(
+        polynomial.square_free_part(),
+        UnivariatePolynomial::from_integers(&[-1, 1])
+    );
+}
+
+#[test]
 fn refines_an_isolating_interval_exactly() {
     let polynomial = UnivariatePolynomial::from_integers(&[-2, 0, 1]);
     let root = polynomial.isolate_real_roots().remove(1);

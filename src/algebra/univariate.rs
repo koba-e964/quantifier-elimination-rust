@@ -223,6 +223,28 @@ impl UnivariatePolynomial {
         }
     }
 
+    /// Return the monic polynomial with the same roots as this polynomial.
+    pub fn monic(&self) -> Self {
+        let Some(leading) = self.leading_coefficient() else {
+            return Self::zero();
+        };
+        Self::new(
+            self.coefficients
+                .iter()
+                .map(|coefficient| coefficient / leading)
+                .collect(),
+        )
+    }
+
+    /// Remove repeated factors and normalize the leading coefficient.
+    pub fn square_free_part(&self) -> Self {
+        if self.degree().is_none_or(|degree| degree == 0) {
+            return self.monic();
+        }
+        let repeated_factor = self.gcd(&self.derivative());
+        self.div_rem(&repeated_factor).0.monic()
+    }
+
     fn root_bound(&self) -> BigRational {
         let leading = self.leading_coefficient().unwrap().abs();
         let max_ratio = self
