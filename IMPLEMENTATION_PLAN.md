@@ -157,7 +157,7 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Eliminate quantifiers whose bound variable is absent from the body.
 - [x] Preserve bodies with multiple free variables without invoking CAD synthesis.
 - [x] Add existential and universal regression coverage.
-- [x] Commit this higher-dimensional QE substep as `afc2f0f`.
+- [x] Commit this higher-dimensional QE substep as `5086aa3`.
 
 ## Validation required for each completed logical step
 
