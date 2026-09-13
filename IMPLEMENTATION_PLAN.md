@@ -140,6 +140,12 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Add regression coverage for an even-multiplicity algebraic root.
 - [x] Commit this root-sample hardening substep as `721872e`.
 
+## Step 9d: Arbitrary-degree algebraic root coverage
+
+- [x] Cover quadratic root isolation with an algebraic constant term.
+- [x] Validate both real roots of `y² - √2`.
+- [x] Commit this root-isolation coverage substep as `dd10136`.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`
