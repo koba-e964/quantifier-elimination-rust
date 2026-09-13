@@ -102,7 +102,7 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Add parser unit tests and CLI integration tests.
 - [x] Document examples and unsupported syntax.
 - [x] Parser foundation committed as `cad9bfa`; CLI and documentation follow in Steps 8b and 8c.
-- [x] Complete the parser/CLI task across commits `cad9bfa`, `e4b138f`, `b277013`, and `bf9af34`.
+- [x] Complete the parser/CLI task across commits `cad9bfa`, `e4b138f`, `b277013`, and `b755aad`.
 
 ## Step 8b: CLI wrapper
 
@@ -117,7 +117,14 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Document the accepted grammar.
 - [x] Document CLI argument and standard-input usage.
 - [x] Document unsupported syntax and current elimination limits.
-- [x] Obtain approval and commit the documentation substep as `eadc21b`.
+- [x] Obtain approval and commit the documentation substep as `b277013`.
+
+## Step 9a: Cross-polynomial algebraic root comparison
+
+- [x] Detect common roots from different rational defining polynomials with an exact gcd.
+- [x] Handle overlapping intervals and endpoint roots without midpoint fallback.
+- [x] Add regression coverage for scaled defining polynomials.
+- [x] Commit this root-sample hardening substep as `784de0f`.
 
 ## Validation required for each completed logical step
 

@@ -207,7 +207,7 @@ fn evaluates_signs_at_rational_defining_polynomial_root_samples_exactly() {
 }
 
 #[test]
-fn reports_unresolved_common_roots_from_different_defining_polynomials() {
+fn compares_common_roots_from_different_defining_polynomials() {
     let left_polynomial = AlgebraicPolynomial::new(vec![
         ExactReal::rational(BigRational::from_integer((-2).into())),
         ExactReal::rational(BigRational::zero()),
@@ -231,13 +231,7 @@ fn reports_unresolved_common_roots_from_different_defining_polynomials() {
             .unwrap(),
     );
 
-    assert!(matches!(
-        left.compare_exact(&right),
-        Err(
-            quantifier_elimination::ExactRealError::AlgebraicRootSampleComparisonUndecidable
-                | quantifier_elimination::ExactRealError::InvalidAlgebraicRootSample
-        )
-    ));
+    assert_eq!(left.compare_exact(&right), Ok(Ordering::Equal));
 }
 
 #[test]

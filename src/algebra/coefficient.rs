@@ -202,12 +202,31 @@ impl AlgebraicRootSample {
             if right.interval.upper < left.interval.lower {
                 return Ok(Ordering::Greater);
             }
+            if let (Some(left_polynomial), Some(right_polynomial)) = (
+                left.polynomial.as_rational_polynomial(),
+                right.polynomial.as_rational_polynomial(),
+            ) {
+                let common = left_polynomial.gcd(&right_polynomial);
+                let lower = left
+                    .interval
+                    .lower
+                    .clone()
+                    .max(right.interval.lower.clone());
+                let upper = left
+                    .interval
+                    .upper
+                    .clone()
+                    .min(right.interval.upper.clone());
+                if (lower < upper
+                    && common.count_roots(&RootInterval::new(lower.clone(), upper.clone())) > 0)
+                    || (lower == upper && common.evaluate(&lower).is_zero())
+                {
+                    return Ok(Ordering::Equal);
+                }
+            }
             let width = left.interval.width().min(right.interval.width()) / BigInt::from(2);
             left = left.refine(&width)?;
             right = right.refine(&width)?;
-        }
-        if left.polynomial == right.polynomial {
-            return Ok(Ordering::Equal);
         }
         Err(ExactRealError::AlgebraicRootSampleComparisonUndecidable)
     }
