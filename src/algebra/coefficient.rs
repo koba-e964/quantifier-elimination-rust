@@ -360,6 +360,9 @@ impl AlgebraicPolynomial {
         if let Some(rational) = self.as_rational_polynomial() {
             return Ok(rational.isolate_real_roots());
         }
+        if let Some(interval) = repeated_quadratic_root_interval(self)? {
+            return Ok(vec![interval]);
+        }
         let bound = self.root_bound()?;
         let mut roots = Vec::new();
         isolate_bernstein(self, degree, -bound.clone(), bound, &mut roots, 0)?;
@@ -403,6 +406,43 @@ impl AlgebraicPolynomial {
             .collect::<Option<Vec<_>>>()
             .map(UnivariatePolynomial::new)
     }
+}
+
+fn repeated_quadratic_root_interval(
+    polynomial: &AlgebraicPolynomial,
+) -> Result<Option<RootInterval>, ExactRealError> {
+    if polynomial.degree() != Some(2) {
+        return Ok(None);
+    }
+    if !matches!(polynomial.coefficient(1), ExactReal::Algebraic(_)) {
+        return Ok(None);
+    }
+    let derivative = match polynomial.derivative() {
+        Ok(derivative) => derivative,
+        Err(_) => return Ok(None),
+    };
+    let Some(root) = derivative.linear_root()? else {
+        return Ok(None);
+    };
+    if let ExactReal::Algebraic(value) = &root {
+        if value.polynomial.count_roots(&value.interval) != 1 {
+            return Ok(None);
+        }
+    }
+    let is_root = match polynomial.evaluate(&root) {
+        Ok(value) => value.is_zero(),
+        Err(_) => return Ok(None),
+    };
+    if !is_root {
+        return Ok(None);
+    }
+    Ok(Some(match root {
+        ExactReal::Rational(value) => RootInterval::new(
+            &value - BigRational::from_integer(1.into()),
+            &value + BigRational::from_integer(1.into()),
+        ),
+        ExactReal::Algebraic(value) => value.interval,
+    }))
 }
 
 fn abs_exact(value: &ExactReal) -> ExactReal {

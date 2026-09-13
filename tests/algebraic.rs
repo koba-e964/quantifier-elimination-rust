@@ -256,6 +256,28 @@ fn refines_an_algebraic_root_sample_at_an_interval_endpoint() {
 }
 
 #[test]
+fn isolates_a_repeated_algebraic_coefficient_root() {
+    let root = ExactReal::algebraic(quantifier_elimination::AlgebraicReal::new(
+        quantifier_elimination::UnivariatePolynomial::from_integers(&[-2, 0, 1]),
+        quantifier_elimination::RootInterval::new(
+            BigRational::from_integer(1.into()),
+            BigRational::from_integer(2.into()),
+        ),
+    ));
+    let twice_negative_root = root
+        .try_mul(&ExactReal::rational(BigRational::from_integer((-2).into())))
+        .unwrap();
+    let polynomial = AlgebraicPolynomial::new(vec![
+        ExactReal::rational(BigRational::from_integer(2.into())),
+        twice_negative_root,
+        ExactReal::rational(BigRational::from_integer(1.into())),
+    ]);
+
+    let roots = polynomial.isolate_real_roots().unwrap();
+    assert_eq!(roots.len(), 1);
+}
+
+#[test]
 fn isolates_distinct_repeated_rational_roots_exactly() {
     let polynomial = AlgebraicPolynomial::new(vec![
         ExactReal::rational(BigRational::from_integer(4.into())),

@@ -133,6 +133,13 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Add endpoint refinement regression coverage.
 - [x] Commit this root-sample hardening substep as `05766c9`.
 
+## Step 9c: Repeated algebraic-coefficient roots
+
+- [x] Detect repeated quadratic roots through exact derivative evaluation.
+- [x] Isolate the repeated `√2` root without relying on sign variation.
+- [x] Add regression coverage for an even-multiplicity algebraic root.
+- [x] Commit this root-sample hardening substep as `721872e`.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`
