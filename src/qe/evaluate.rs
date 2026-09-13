@@ -76,7 +76,8 @@ pub fn eliminate_univariate(formula: &Formula) -> Result<Formula, QuantifierEval
 ///
 /// Currently supported inputs are closed one-variable formulas and formulas
 /// with one quantified variable plus one free variable. General multivariate
-/// formula synthesis is not enabled yet.
+/// formula synthesis is not enabled yet; formulas retaining two or more free
+/// variables are rejected until a higher-dimensional lifting layer exists.
 pub fn eliminate(formula: &Formula) -> Result<Formula, QuantifierEvaluationError> {
     if !matches!(formula, Formula::Quantified { .. }) {
         return Err(QuantifierEvaluationError::WrongVariable);

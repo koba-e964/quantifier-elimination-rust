@@ -64,6 +64,13 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Preserve the existing implementation after the invariant audit.
 - [x] Obtain approval and commit this Step 7b change as `e1a8f26`.
 
+## Step 7c: Multivariate synthesis boundary
+
+- [x] Confirm the current two-variable lifting/synthesis boundary.
+- [x] Document rejection of formulas with multiple free variables.
+- [x] Retain the explicit multivariate-rejection regression test.
+- [x] Obtain approval and commit this Step 7c change as `ffbbbdc`.
+
 ## Step 7: Quantifier elimination extensions
 
 - [ ] Support recursive lifting for multiple quantified variables.
