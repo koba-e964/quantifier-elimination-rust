@@ -372,6 +372,24 @@ fn synthesizes_multiple_free_conditions_over_an_algebraic_base_section() {
 }
 
 #[test]
+fn composes_nested_multivariate_cad_elimination_in_variable_order() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let z = Polynomial::variable(2);
+    let formula = Formula::forall(
+        2,
+        Formula::exists(1, Formula::atom(y.clone() * y + x * z, Relation::Equal)),
+    );
+    let eliminated = quantifier_elimination::eliminate(&formula).unwrap();
+
+    for (x_value, expected) in [(0, true), (1, false), (-1, false)] {
+        let mut values = BTreeMap::new();
+        values.insert(0, BigRational::from_integer(x_value.into()));
+        assert_eq!(eliminated.evaluate(&values), Some(expected));
+    }
+}
+
+#[test]
 fn eliminates_vacuous_quantifiers_with_multiple_free_variables() {
     let x = Polynomial::variable(0);
     let z = Polynomial::variable(2);

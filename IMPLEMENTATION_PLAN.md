@@ -302,6 +302,13 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Add regression coverage for duplicate synthesized branches.
 - [x] Commit this higher-dimensional QE substep as `8d73a78`.
 
+## Step 13e: Nested multivariate quantifier composition
+
+- [x] Eliminate an inner nonlinear quantified variable with multiple free variables.
+- [x] Feed the synthesized result into an outer quantifier in the correct variable order.
+- [x] Add positive, negative, and zero-boundary semantic coverage.
+- [ ] Commit this higher-dimensional QE substep after the full validation pass.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`
