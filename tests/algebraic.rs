@@ -192,6 +192,21 @@ fn refines_and_compares_algebraic_coefficient_root_samples_exactly() {
 }
 
 #[test]
+fn evaluates_signs_at_rational_defining_polynomial_root_samples_exactly() {
+    let polynomial = AlgebraicPolynomial::new(vec![
+        ExactReal::rational(BigRational::from_integer((-2).into())),
+        ExactReal::rational(BigRational::zero()),
+        ExactReal::rational(BigRational::from_integer(1.into())),
+    ]);
+    let sample = AlgebraicRootSample::new(
+        polynomial.clone(),
+        polynomial.isolate_real_roots().unwrap().pop().unwrap(),
+    );
+
+    assert_eq!(sample.sign_of(&polynomial), Ok(Ordering::Equal));
+}
+
+#[test]
 fn reports_unresolved_common_roots_from_different_defining_polynomials() {
     let left_polynomial = AlgebraicPolynomial::new(vec![
         ExactReal::rational(BigRational::from_integer((-2).into())),

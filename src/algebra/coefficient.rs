@@ -206,6 +206,18 @@ impl AlgebraicRootSample {
         }
         Err(ExactRealError::AlgebraicRootSampleComparisonUndecidable)
     }
+
+    pub fn sign_of(&self, polynomial: &AlgebraicPolynomial) -> Result<Ordering, ExactRealError> {
+        let defining = self
+            .polynomial
+            .as_rational_polynomial()
+            .ok_or(ExactRealError::AlgebraicArithmeticNotImplemented)?;
+        let value = polynomial.evaluate(&ExactReal::algebraic(AlgebraicReal::new(
+            defining,
+            self.interval.clone(),
+        )))?;
+        Ok(value.sign())
+    }
 }
 
 impl AlgebraicPolynomial {

@@ -160,13 +160,19 @@ impl UnivariateCell {
     }
 
     pub fn sign_of_algebraic(&self, polynomial: &AlgebraicPolynomial) -> Result<i8, LiftingError> {
-        let value = polynomial
-            .evaluate(
-                &exact_value(self)
-                    .map_err(|_| LiftingError::AlgebraicCoefficientRootUnsupported)?,
-            )
-            .map_err(|_| LiftingError::AlgebraicCoefficientRootUnsupported)?;
-        Ok(match value.sign() {
+        let sign = if let Some(root) = &self.algebraic_root_sample {
+            root.sign_of(polynomial)
+                .map_err(|_| LiftingError::AlgebraicCoefficientRootUnsupported)?
+        } else {
+            polynomial
+                .evaluate(
+                    &exact_value(self)
+                        .map_err(|_| LiftingError::AlgebraicCoefficientRootUnsupported)?,
+                )
+                .map_err(|_| LiftingError::AlgebraicCoefficientRootUnsupported)?
+                .sign()
+        };
+        Ok(match sign {
             std::cmp::Ordering::Less => -1,
             std::cmp::Ordering::Equal => 0,
             std::cmp::Ordering::Greater => 1,
