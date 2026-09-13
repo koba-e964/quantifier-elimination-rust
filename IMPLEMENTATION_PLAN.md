@@ -187,6 +187,12 @@ logical step is completed as a unit; approval is requested before its commit.
 - [x] Verify zero and nonzero leading-coefficient cases semantically.
 - [x] Commit this higher-dimensional QE substep as `7b27be9`.
 
+## Step 10f: Multivariate scope documentation
+
+- [x] Document linear atomic multivariate elimination as supported.
+- [x] Retain explicit documentation for unsupported nonlinear and compound cases.
+- [ ] Commit this higher-dimensional QE substep.
+
 ## Validation required for each completed logical step
 
 - [x] `cargo fmt --all`

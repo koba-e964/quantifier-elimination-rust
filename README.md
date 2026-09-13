@@ -44,14 +44,15 @@ The initial grammar uses variables such as `x0`, integer constants, `+`, `-`,
 
 The CLI currently reports quantifier-free results as `true`, `false`, or a
 formula using the same comparison and Boolean syntax. Floating-point literals,
-implicit multiplication, named variables, and formulas retaining multiple free
-variables are not supported yet.
+implicit multiplication, and named variables are not supported yet.
 
 ## Current scope
 
-`eliminate` currently supports closed one-variable formulas and formulas with
-one quantified variable plus one free variable. General multivariate formula
-synthesis and full nested-quantifier elimination are still in progress.
+`eliminate` supports closed one-variable formulas, formulas with one quantified
+variable plus one free variable, vacuous quantifiers, and single atomic formulas
+linear in the quantified variable even when multiple free variables remain.
+General multivariate synthesis for nonlinear or compound formulas is not
+supported yet.
 
 Two-variable lifting supports quadratic sections over irrational algebraic base
 samples. Formula relations at lifted algebraic sections are evaluated exactly
