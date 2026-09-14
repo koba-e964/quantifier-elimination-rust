@@ -103,3 +103,20 @@ fn reports_an_explicit_variable_order() {
     assert!(output.status.success());
     assert!(String::from_utf8_lossy(&output.stderr).contains("lifting order 0: x2 -> x0 -> x1"));
 }
+
+#[test]
+fn preserves_the_result_across_variable_orders() {
+    let outputs = ["x0,x2", "x2,x0"].map(|order| {
+        let variable_order = format!("--variable-order={order}");
+        let output = Command::new(env!("CARGO_BIN_EXE_qe"))
+            .arg(variable_order)
+            .arg("exists x1. x1^2 + x0 + x2 = 0")
+            .output()
+            .unwrap();
+
+        assert!(output.status.success());
+        String::from_utf8(output.stdout).unwrap()
+    });
+
+    assert_eq!(outputs[0], outputs[1]);
+}
