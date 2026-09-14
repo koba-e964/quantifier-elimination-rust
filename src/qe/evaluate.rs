@@ -1,6 +1,7 @@
 use crate::algebra::univariate::UnivariatePolynomial;
 use crate::cad::lifting::{
-    decompose_univariate, synthesize_cell_conditions, FormulaEvaluationError, LiftingError,
+    decompose_univariate, synthesize_cell_conditions, CadCell, CellKind, FormulaEvaluationError,
+    LiftingError, RecursiveLifting, TwoDimensionalLifting, UnivariateCell,
 };
 use crate::cad::lifting::{lift_recursive, lift_two_variables};
 use crate::cad::projection::ProjectionError;
@@ -17,6 +18,66 @@ pub enum QuantifierEvaluationError {
     NestedQuantifier,
     NonUnivariatePolynomial,
     WrongVariable,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct EliminationStats {
+    pub quantifier_calls: usize,
+    pub cells_constructed: usize,
+    pub leaf_cells: usize,
+    pub sector_cells: usize,
+    pub section_cells: usize,
+    pub projection_levels: usize,
+    pub projection_polynomials: usize,
+}
+
+impl EliminationStats {
+    fn record_kind(&mut self, kind: &CellKind) {
+        match kind {
+            CellKind::Sector => self.sector_cells += 1,
+            CellKind::Section => self.section_cells += 1,
+        }
+    }
+
+    fn record_univariate_cells(&mut self, cells: &[UnivariateCell]) {
+        self.cells_constructed += cells.len();
+        self.leaf_cells += cells.len();
+        for cell in cells {
+            self.record_kind(&cell.kind);
+        }
+    }
+
+    fn record_projection_stack(&mut self, stack: &crate::cad::projection::ProjectionStack) {
+        self.projection_levels += stack.levels.len().saturating_sub(1);
+        self.projection_polynomials += stack.levels.iter().map(Vec::len).sum::<usize>();
+    }
+
+    fn record_two_dimensional_lifting(&mut self, lifting: &TwoDimensionalLifting) {
+        self.record_projection_stack(&lifting.projection_stack);
+        self.record_univariate_cells(&lifting.base_cells);
+        for cells in &lifting.lifted_cells {
+            self.record_univariate_cells(cells);
+        }
+    }
+
+    fn record_recursive_lifting(&mut self, lifting: &RecursiveLifting) {
+        self.record_projection_stack(&lifting.projection_stack);
+        for cell in &lifting.cells {
+            self.record_cad_cell(cell);
+        }
+    }
+
+    fn record_cad_cell(&mut self, cell: &CadCell) {
+        self.cells_constructed += 1;
+        self.record_kind(&cell.coordinate.kind);
+        if cell.children.is_empty() {
+            self.leaf_cells += 1;
+        } else {
+            for child in &cell.children {
+                self.record_cad_cell(child);
+            }
+        }
+    }
 }
 
 impl From<ProjectionError> for QuantifierEvaluationError {
@@ -41,6 +102,13 @@ impl From<FormulaEvaluationError> for QuantifierEvaluationError {
 /// This is the evaluation half of one-variable quantifier elimination; formula
 /// synthesis is kept separate for the multivariate CAD implementation.
 pub fn decide_univariate(formula: &Formula) -> Result<bool, QuantifierEvaluationError> {
+    decide_univariate_with_stats(formula, &mut EliminationStats::default())
+}
+
+fn decide_univariate_with_stats(
+    formula: &Formula,
+    stats: &mut EliminationStats,
+) -> Result<bool, QuantifierEvaluationError> {
     let (quantifier, variable, body) = match formula {
         Formula::Quantified {
             quantifier,
@@ -55,6 +123,7 @@ pub fn decide_univariate(formula: &Formula) -> Result<bool, QuantifierEvaluation
     let mut polynomials = Vec::new();
     collect_polynomials(body, &mut polynomials)?;
     let cells = decompose_univariate(&polynomials);
+    stats.record_univariate_cells(&cells);
     let values = cells
         .iter()
         .map(|cell| cell.evaluate_formula(body))
@@ -83,13 +152,25 @@ pub fn eliminate_univariate(formula: &Formula) -> Result<Formula, QuantifierEval
 /// algebraic-coefficient arithmetic beyond the exact operations implemented by
 /// the lifting layer remains explicitly unsupported.
 pub fn eliminate(formula: &Formula) -> Result<Formula, QuantifierEvaluationError> {
+    eliminate_with_stats(formula).map(|(result, _)| result)
+}
+
+pub fn eliminate_with_stats(
+    formula: &Formula,
+) -> Result<(Formula, EliminationStats), QuantifierEvaluationError> {
     if !matches!(formula, Formula::Quantified { .. }) {
         return Err(QuantifierEvaluationError::WrongVariable);
     }
-    eliminate_recursive(formula)
+    let mut stats = EliminationStats::default();
+    let result = eliminate_recursive(formula, &mut stats)?;
+    Ok((result, stats))
 }
 
-fn eliminate_recursive(formula: &Formula) -> Result<Formula, QuantifierEvaluationError> {
+fn eliminate_recursive(
+    formula: &Formula,
+    stats: &mut EliminationStats,
+) -> Result<Formula, QuantifierEvaluationError> {
+    stats.quantifier_calls += 1;
     let Formula::Quantified {
         quantifier,
         variable,
@@ -99,7 +180,7 @@ fn eliminate_recursive(formula: &Formula) -> Result<Formula, QuantifierEvaluatio
         return Err(QuantifierEvaluationError::WrongVariable);
     };
 
-    let body = simplify(&eliminate_nested_children(body)?);
+    let body = simplify(&eliminate_nested_children(body, stats)?);
     if !body.free_variables().contains(variable) {
         return Ok(simplify(&body));
     }
@@ -120,7 +201,8 @@ fn eliminate_recursive(formula: &Formula) -> Result<Formula, QuantifierEvaluatio
     if let Some(eliminated) = eliminate_exists_linear_inequalities(&reduced, *variable) {
         return Ok(simplify(&eliminated));
     }
-    if let Some(eliminated) = eliminate_supported_boolean_branches(*quantifier, *variable, &reduced)
+    if let Some(eliminated) =
+        eliminate_supported_boolean_branches(*quantifier, *variable, &reduced, stats)
     {
         return Ok(simplify(&eliminated?));
     }
@@ -129,13 +211,23 @@ fn eliminate_recursive(formula: &Formula) -> Result<Formula, QuantifierEvaluatio
     }
     let free_variables = formula.free_variables();
     if free_variables.is_empty() {
-        eliminate_univariate(&reduced)
+        Ok(if decide_univariate_with_stats(&reduced, stats)? {
+            Formula::True
+        } else {
+            Formula::False
+        })
     } else if free_variables.len() == 1 {
-        eliminate_one_variable(&reduced, *free_variables.first().unwrap(), *variable)
+        eliminate_one_variable_with_stats(
+            &reduced,
+            *free_variables.first().unwrap(),
+            *variable,
+            stats,
+        )
     } else {
         let mut variable_order = free_variables.iter().copied().collect::<Vec<_>>();
         variable_order.push(*variable);
         let lifting = lift_recursive(&reduced, &variable_order)?;
+        stats.record_recursive_lifting(&lifting);
         lifting
             .synthesize_quantifier(&body, *quantifier, *variable)
             .map(|result| simplify(&result))
@@ -341,6 +433,7 @@ fn eliminate_supported_boolean_branches(
     quantifier: Quantifier,
     variable: usize,
     formula: &Formula,
+    stats: &mut EliminationStats,
 ) -> Option<Result<Formula, QuantifierEvaluationError>> {
     let Formula::Quantified { body, .. } = formula else {
         return None;
@@ -349,14 +442,18 @@ fn eliminate_supported_boolean_branches(
         (Quantifier::Exists, Formula::Or(branches)) => Some(
             branches
                 .iter()
-                .map(|branch| eliminate_recursive(&Formula::exists(variable, branch.clone())))
+                .map(|branch| {
+                    eliminate_recursive(&Formula::exists(variable, branch.clone()), stats)
+                })
                 .collect::<Result<Vec<_>, _>>()
                 .map(Formula::Or),
         ),
         (Quantifier::Forall, Formula::And(branches)) => Some(
             branches
                 .iter()
-                .map(|branch| eliminate_recursive(&Formula::forall(variable, branch.clone())))
+                .map(|branch| {
+                    eliminate_recursive(&Formula::forall(variable, branch.clone()), stats)
+                })
                 .collect::<Result<Vec<_>, _>>()
                 .map(Formula::And),
         ),
@@ -370,7 +467,10 @@ fn eliminate_supported_boolean_branches(
             }
             let guard = simplify(&Formula::And(independent));
             let quantified = Formula::exists(variable, simplify(&Formula::And(dependent)));
-            Some(eliminate_recursive(&quantified).map(|result| Formula::And(vec![guard, result])))
+            Some(
+                eliminate_recursive(&quantified, stats)
+                    .map(|result| Formula::And(vec![guard, result])),
+            )
         }
         (Quantifier::Forall, Formula::Or(branches)) => {
             let (independent, dependent): (Vec<_>, Vec<_>) = branches
@@ -387,7 +487,8 @@ fn eliminate_supported_boolean_branches(
                 );
                 let quantified = Formula::exists(variable, negated);
                 return Some(
-                    eliminate_recursive(&quantified).map(|result| Formula::Not(Box::new(result))),
+                    eliminate_recursive(&quantified, stats)
+                        .map(|result| Formula::Not(Box::new(result))),
                 );
             }
             if dependent.is_empty() {
@@ -395,14 +496,17 @@ fn eliminate_supported_boolean_branches(
             }
             let guard = simplify(&Formula::Or(independent));
             let quantified = Formula::forall(variable, simplify(&Formula::Or(dependent)));
-            Some(eliminate_recursive(&quantified).map(|result| Formula::Or(vec![guard, result])))
+            Some(
+                eliminate_recursive(&quantified, stats)
+                    .map(|result| Formula::Or(vec![guard, result])),
+            )
         }
         (Quantifier::Exists, Formula::Not(inner)) => Some(
-            eliminate_recursive(&Formula::forall(variable, inner.as_ref().clone()))
+            eliminate_recursive(&Formula::forall(variable, inner.as_ref().clone()), stats)
                 .map(|result| Formula::Not(Box::new(result))),
         ),
         (Quantifier::Forall, Formula::Not(inner)) => Some(
-            eliminate_recursive(&Formula::exists(variable, inner.as_ref().clone()))
+            eliminate_recursive(&Formula::exists(variable, inner.as_ref().clone()), stats)
                 .map(|result| Formula::Not(Box::new(result))),
         ),
         _ => None,
@@ -502,23 +606,26 @@ fn negate_relation(relation: crate::formula::Relation) -> crate::formula::Relati
     }
 }
 
-fn eliminate_nested_children(formula: &Formula) -> Result<Formula, QuantifierEvaluationError> {
+fn eliminate_nested_children(
+    formula: &Formula,
+    stats: &mut EliminationStats,
+) -> Result<Formula, QuantifierEvaluationError> {
     Ok(match formula {
         Formula::True | Formula::False | Formula::Atom(_) => formula.clone(),
-        Formula::Not(body) => Formula::Not(Box::new(eliminate_nested_children(body)?)),
+        Formula::Not(body) => Formula::Not(Box::new(eliminate_nested_children(body, stats)?)),
         Formula::And(formulas) => Formula::And(
             formulas
                 .iter()
-                .map(eliminate_nested_children)
+                .map(|formula| eliminate_nested_children(formula, stats))
                 .collect::<Result<_, _>>()?,
         ),
         Formula::Or(formulas) => Formula::Or(
             formulas
                 .iter()
-                .map(eliminate_nested_children)
+                .map(|formula| eliminate_nested_children(formula, stats))
                 .collect::<Result<_, _>>()?,
         ),
-        Formula::Quantified { .. } => eliminate_recursive(formula)?,
+        Formula::Quantified { .. } => eliminate_recursive(formula, stats)?,
     })
 }
 
@@ -528,6 +635,20 @@ pub fn eliminate_one_variable(
     formula: &Formula,
     free_variable: usize,
     quantified_variable: usize,
+) -> Result<Formula, QuantifierEvaluationError> {
+    eliminate_one_variable_with_stats(
+        formula,
+        free_variable,
+        quantified_variable,
+        &mut EliminationStats::default(),
+    )
+}
+
+fn eliminate_one_variable_with_stats(
+    formula: &Formula,
+    free_variable: usize,
+    quantified_variable: usize,
+    stats: &mut EliminationStats,
 ) -> Result<Formula, QuantifierEvaluationError> {
     let Formula::Quantified {
         quantifier,
@@ -545,6 +666,7 @@ pub fn eliminate_one_variable(
         return Err(QuantifierEvaluationError::WrongVariable);
     }
     let lifting = lift_two_variables(formula, &[free_variable, quantified_variable])?;
+    stats.record_two_dimensional_lifting(&lifting);
     let truth_table = lifting.truth_table(body)?;
     let base_truth = truth_table
         .iter()

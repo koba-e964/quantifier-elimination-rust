@@ -1,8 +1,12 @@
 use std::process::Command;
 
 fn run_cli(formula: &str) -> String {
+    run_cli_args([formula])
+}
+
+fn run_cli_args<const N: usize>(args: [&str; N]) -> String {
     let output = Command::new(env!("CARGO_BIN_EXE_qe"))
-        .arg(formula)
+        .args(args)
         .output()
         .unwrap();
     format!(
@@ -61,4 +65,12 @@ fn snapshots_vieta_quadratic_root_condition() {
 #[test]
 fn snapshots_parse_error_output() {
     insta::assert_snapshot!("parse_error_output", run_cli("x0 ="));
+}
+
+#[test]
+fn snapshots_stats_output() {
+    insta::assert_snapshot!(
+        "stats_output",
+        run_cli_args(["--stats", "exists x1. x1^2 + x0 + x2 = 0"])
+    );
 }

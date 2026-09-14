@@ -20,4 +20,6 @@ pub use algebra::univariate::{RootInterval, UnivariatePolynomial};
 pub use formula::{Atom, Formula, Quantifier, Relation, RenameError};
 pub use parser::{parse_formula, ParseError};
 pub use polynomial::{Monomial, Polynomial, PolynomialEvaluationError, Variable, VariableNames};
-pub use qe::evaluate::{eliminate, QuantifierEvaluationError};
+pub use qe::evaluate::{
+    eliminate, eliminate_with_stats, EliminationStats, QuantifierEvaluationError,
+};

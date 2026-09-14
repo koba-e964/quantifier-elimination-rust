@@ -1,4 +1,6 @@
-use quantifier_elimination::{eliminate, parse_formula, Formula, Relation};
+use quantifier_elimination::{
+    eliminate_with_stats, parse_formula, EliminationStats, Formula, Relation,
+};
 use std::io::Read;
 
 fn main() {
@@ -7,9 +9,15 @@ fn main() {
         .iter()
         .any(|argument| argument == "--help" || argument == "-h")
     {
-        println!("usage: qe [FORMULA]\n       printf '%s' FORMULA | qe");
+        println!("usage: qe [--stats] [FORMULA]\n       printf '%s' FORMULA | qe [--stats]");
         return;
     }
+
+    let show_stats = arguments.iter().any(|argument| argument == "--stats");
+    let arguments = arguments
+        .into_iter()
+        .filter(|argument| argument != "--stats")
+        .collect::<Vec<_>>();
 
     let input = if arguments.is_empty() {
         let mut input = String::new();
@@ -29,13 +37,31 @@ fn main() {
             std::process::exit(2);
         }
     };
-    match eliminate(&formula) {
-        Ok(result) => println!("{}", format_formula(&result)),
+    match eliminate_with_stats(&formula) {
+        Ok((result, stats)) => {
+            println!("{}", format_formula(&result));
+            if show_stats {
+                eprintln!("{}", format_stats(&stats));
+            }
+        }
         Err(error) => {
             eprintln!("qe: elimination error: {error:?}");
             std::process::exit(1);
         }
     }
+}
+
+fn format_stats(stats: &EliminationStats) -> String {
+    format!(
+        "stats:\n  quantifier calls: {}\n  cells constructed: {}\n  leaf cells: {}\n  sector cells: {}\n  section cells: {}\n  projection levels: {}\n  projection polynomials: {}",
+        stats.quantifier_calls,
+        stats.cells_constructed,
+        stats.leaf_cells,
+        stats.sector_cells,
+        stats.section_cells,
+        stats.projection_levels,
+        stats.projection_polynomials,
+    )
 }
 
 fn format_formula(formula: &Formula) -> String {

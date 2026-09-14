@@ -55,3 +55,18 @@ fn prints_linear_multivariate_elimination_results() {
     assert_eq!(String::from_utf8_lossy(&output.stdout), "x0 + x2 != 0\n");
     assert!(output.stderr.is_empty());
 }
+
+#[test]
+fn prints_cad_stats_when_requested() {
+    let output = Command::new(env!("CARGO_BIN_EXE_qe"))
+        .args(["--stats", "exists x1. x1^2 + x0 + x2 = 0"])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "x0 + x2 <= 0\n");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("cells constructed: "));
+    assert!(stderr.contains("leaf cells: "));
+    assert!(stderr.contains("projection polynomials: "));
+}
