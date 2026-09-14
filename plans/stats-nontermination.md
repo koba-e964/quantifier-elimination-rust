@@ -1,6 +1,6 @@
 # Stats and non-terminating simple formulas
 
-Current step: Step 4 — verify special-rule results against general CAD.
+Current step: Step 5 — establish a reproducible threshold or timeout test.
 
 ## Observed issue
 
@@ -55,7 +55,7 @@ the sum/product/square relationship.
   partial rewrite to a polynomial that changes under swapping `x0` and `x1`.
 - [x] Keep special rules guarded: unsupported shapes must fall back to the
   general exact elimination path.
-- [ ] Design a rule representation that can be serialized as a configuration
+- [x] Design a rule representation that can be serialized as a configuration
   file if the rule language remains unambiguous and type-safe; otherwise keep
   the matcher implementation-driven and expose only configuration for enabling
   and ordering rules.
@@ -79,22 +79,22 @@ the sum/product/square relationship.
   evaluation or an equivalent exact oracle.
 - [x] Add positive, negative, renamed-variable, reordered-conjunction, and
   non-matching regression cases.
-- [ ] Record whether the verifier is a test-only oracle or an optional runtime
+- [x] Record whether the verifier is a test-only oracle or an optional runtime
   safety check.
 
 ## Step 5: Define the termination guard
 
-- [ ] Add a bounded diagnostic mode or progress counters that distinguish recursive calls, projection levels, and cells constructed.
+- [x] Add a bounded diagnostic mode or progress counters that distinguish recursive calls, projection levels, and cells constructed.
 - [ ] Establish a reproducible threshold or timeout test for the formula.
-- [ ] Preserve exact arithmetic; do not replace the CAD path with approximate sampling.
+- [x] Preserve exact arithmetic; do not replace the CAD path with approximate sampling.
 
 ## Step 6: Regression coverage
 
-- [ ] Add a bounded CLI regression test for the reported formula with special
+- [x] Add a bounded CLI regression test for the reported formula with special
   handling enabled and disabled.
-- [ ] Add snapshots for both result modes and requested stats once the output
+- [x] Add snapshots for both result modes and requested stats once the output
   is stable.
-- [ ] Run formatting, tests, Clippy, and pre-commit.
+- [x] Run formatting, tests, Clippy, and pre-commit.
 
 ## Step 7: Review and commit
 
@@ -108,3 +108,4 @@ the sum/product/square relationship.
 - [x] Record implementation commit `cd44a60` for configuration loading and CLI integration.
 - [x] Record implementation commit `321101a` for special-rule CAD equivalence coverage.
 - [x] Record implementation commit `ae4d3c7` for special-rule matching-safety coverage.
+- [x] Record implementation commit `e720492` for config and baseline CLI coverage.

@@ -90,6 +90,42 @@ fn applies_symmetric_special_handling_before_cad() {
 }
 
 #[test]
+fn loads_special_rules_from_a_config_file() {
+    let output = Command::new(env!("CARGO_BIN_EXE_qe"))
+        .args([
+            "--special-rules=config/special-rules.toml",
+            "exists x0. exists x1. x2=x0+x1&&x3=x0*x1",
+        ])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "x2^2 - 4*x3 >= 0\n"
+    );
+}
+
+#[test]
+fn special_handling_can_be_disabled_for_a_cad_baseline() {
+    let output = Command::new(env!("CARGO_BIN_EXE_qe"))
+        .args([
+            "--stats",
+            "--special-handling=false",
+            "exists x0. exists x1. x2=x0+x1&&x3=x0*x1",
+        ])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "x2^2 - 4*x3 >= 0\n"
+    );
+    assert!(String::from_utf8_lossy(&output.stderr).contains("cells constructed: "));
+}
+
+#[test]
 fn reports_an_explicit_variable_order() {
     let output = Command::new(env!("CARGO_BIN_EXE_qe"))
         .args([
