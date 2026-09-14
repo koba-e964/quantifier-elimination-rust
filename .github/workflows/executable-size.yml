@@ -1,0 +1,25 @@
+name: Executable size
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  executable-size:
+    runs-on: ubuntu-latest
+    env:
+      MAX_BYTES: 2000000
+    steps:
+      - uses: actions/checkout@v7
+      - run: cargo build --release --bin qe
+      - name: Check executable size
+        run: |
+          size_bytes=$(stat -c '%s' target/release/qe)
+          echo "target/release/qe: ${size_bytes} bytes (limit: ${MAX_BYTES})"
+          if (( size_bytes > MAX_BYTES )); then
+            echo "::error::target/release/qe exceeds the executable size limit"
+            exit 1
+          fi
