@@ -9,6 +9,7 @@ use crate::formula::{Atom, Formula, Quantifier};
 use crate::polynomial::Monomial;
 use crate::qe::simplify::simplify;
 use crate::qe::special::eliminate_symmetric_pair;
+pub use crate::qe::special::{SpecialHandlingConfig, SpecialRule};
 use num_traits::Signed;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -31,24 +32,6 @@ pub struct EliminationStats {
     pub projection_levels: usize,
     pub projection_polynomials: usize,
     pub lifting_orders: Vec<Vec<usize>>,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum SpecialRule {
-    SymmetricSumProduct,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct SpecialHandlingConfig {
-    pub enabled_rules: Vec<SpecialRule>,
-}
-
-impl Default for SpecialHandlingConfig {
-    fn default() -> Self {
-        Self {
-            enabled_rules: vec![SpecialRule::SymmetricSumProduct],
-        }
-    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

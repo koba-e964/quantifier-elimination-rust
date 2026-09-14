@@ -1,6 +1,6 @@
 # Stats and non-terminating simple formulas
 
-Current step: Step 3 — load typed special-rule declarations from a configuration file.
+Current step: Step 4 — verify special-rule results against general CAD.
 
 ## Observed issue
 
@@ -62,13 +62,13 @@ the sum/product/square relationship.
 - [x] Move special-rule implementations behind a dedicated module or directory
   boundary; evaluate a separate crate only if the dependency and API boundary
   remains clean.
-- [ ] Load the typed rule declarations from a user-provided configuration file
+- [x] Load the typed rule declarations from a user-provided configuration file
   and expose the file path through the CLI.
-- [ ] Prefer configuration that declares symmetric witness groups and their
+- [x] Prefer configuration that declares symmetric witness groups and their
   sum/product bindings; keep the mathematically sensitive symmetric-polynomial
   reduction engine typed and implementation-backed rather than accepting
   arbitrary user-authored code or unchecked replacement strings.
-- [ ] Document precedence, matching conditions, generated constraints, and
+- [x] Document precedence, matching conditions, generated constraints, and
   whether a rule is allowed to call the CAD verifier.
 
 ## Step 4: Verify special rules against CAD
@@ -105,3 +105,4 @@ the sum/product/square relationship.
 - [x] Record implementation commit `6f906d9` for deterministic default order selection.
 - [x] Record implementation commit `239eef7` for alternate-order semantic verification.
 - [x] Record implementation commit `e3809e0` for the dedicated special-rule module.
+- [x] Record implementation commit `cd44a60` for configuration loading and CLI integration.

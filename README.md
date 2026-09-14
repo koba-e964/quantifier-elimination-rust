@@ -37,6 +37,35 @@ qe 'exists x0. x0^2 + 1 = 0'
 printf '%s' 'exists x0. x0 = 0' | qe
 ```
 
+The CLI can report CAD statistics and control the special-rule path:
+
+```text
+qe --stats 'exists x1. x1^2 + x0 + x2 = 0'
+qe --special-handling=false 'exists x0. exists x1. x2=x0+x1&&x3=x0*x1'
+```
+
+Special handling is enabled by default. The current typed special-rule
+configuration supports the symmetric sum/product rule for existential witness
+pairs. It can be loaded from a small TOML-shaped file:
+
+```toml
+[special-rules]
+symmetric-sum-product = true
+```
+
+Pass the file with `--special-rules=PATH`; the checked-in example is
+[`config/special-rules.toml`](config/special-rules.toml):
+
+```text
+qe --special-rules=config/special-rules.toml \
+  'exists x0. exists x1. x2=x0+x1&&x3=x0*x1'
+```
+
+The rule rewrites symmetric polynomials in the witnesses using their sum and
+product, and adds the exact real-root condition `sum^2 - 4*product >= 0`.
+Unknown rule names are rejected rather than interpreted as arbitrary rewrite
+code.
+
 The initial grammar uses variables such as `x0`, integer constants, `+`, `-`,
 `*`, `^`, parentheses, comparison operators (`=`, `!=`, `<`, `<=`, `>`,
 `>=`), Boolean operators (`!`, `&&`, `||`), and quantifiers written as

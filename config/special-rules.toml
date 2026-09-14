@@ -1,0 +1,3 @@
+# Enable the typed special-rule implementations used by qe.
+[special-rules]
+symmetric-sum-product = true

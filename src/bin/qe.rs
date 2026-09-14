@@ -10,7 +10,7 @@ fn main() {
         .iter()
         .any(|argument| argument == "--help" || argument == "-h")
     {
-        println!("usage: qe [--stats] [--special-handling=true|false] [--variable-order=xN,xN,...] [FORMULA]\n       printf '%s' FORMULA | qe [--stats]");
+        println!("usage: qe [--stats] [--special-handling=true|false] [--special-rules=PATH] [--variable-order=xN,xN,...] [FORMULA]\n       printf '%s' FORMULA | qe [--stats]");
         return;
     }
 
@@ -25,6 +25,13 @@ fn main() {
             std::process::exit(2);
         }
     };
+    let special_rules = match parse_special_rules(&arguments) {
+        Ok(config) => config,
+        Err(error) => {
+            eprintln!("qe: {error}");
+            std::process::exit(2);
+        }
+    };
     let arguments = arguments
         .into_iter()
         .filter(|argument| {
@@ -32,6 +39,7 @@ fn main() {
                 && argument != "--special-handling=true"
                 && argument != "--special-handling=false"
                 && !argument.starts_with("--variable-order=")
+                && !argument.starts_with("--special-rules=")
         })
         .collect::<Vec<_>>();
 
@@ -57,7 +65,7 @@ fn main() {
         &formula,
         EliminationOptions {
             special_handling,
-            special_rules: SpecialHandlingConfig::default(),
+            special_rules,
             variable_order,
         },
     ) {
@@ -72,6 +80,20 @@ fn main() {
             std::process::exit(1);
         }
     }
+}
+
+fn parse_special_rules(arguments: &[String]) -> Result<SpecialHandlingConfig, String> {
+    let Some(argument) = arguments
+        .iter()
+        .find(|argument| argument.starts_with("--special-rules="))
+    else {
+        return Ok(SpecialHandlingConfig::default());
+    };
+    let path = argument.trim_start_matches("--special-rules=");
+    if path.is_empty() {
+        return Err("--special-rules requires a file path".to_owned());
+    }
+    SpecialHandlingConfig::from_file(path)
 }
 
 fn parse_variable_order(arguments: &[String]) -> Result<Option<Vec<usize>>, String> {
