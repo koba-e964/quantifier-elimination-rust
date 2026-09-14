@@ -111,10 +111,27 @@ fn merges_complete_sign_partitions_in_disjunctions() {
 
     assert_eq!(
         simplify(&Formula::Or(terms)),
-        Formula::Or(vec![
-            Formula::atom(y.clone(), Relation::Less),
-            Formula::atom(y, Relation::Equal),
-        ])
+        Formula::atom(y, Relation::LessOrEqual)
+    );
+}
+
+#[test]
+fn merges_adjacent_sign_relations() {
+    let polynomial = Polynomial::variable(0);
+
+    assert_eq!(
+        simplify(&Formula::Or(vec![
+            Formula::atom(polynomial.clone(), Relation::Less),
+            Formula::atom(polynomial.clone(), Relation::Equal),
+        ])),
+        Formula::atom(polynomial.clone(), Relation::LessOrEqual)
+    );
+    assert_eq!(
+        simplify(&Formula::Or(vec![
+            Formula::atom(polynomial.clone(), Relation::Greater),
+            Formula::atom(polynomial, Relation::Equal),
+        ])),
+        Formula::atom(Polynomial::variable(0), Relation::GreaterOrEqual)
     );
 }
 

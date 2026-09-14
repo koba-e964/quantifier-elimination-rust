@@ -78,6 +78,7 @@ fn simplify_disjunction(formulas: &[Formula]) -> Formula {
         }
     }
     simplified = merge_complete_sign_partitions(simplified);
+    simplified = merge_adjacent_sign_relations(simplified);
     match simplified.len() {
         0 => Formula::False,
         1 => simplified.pop().unwrap(),
@@ -189,4 +190,44 @@ fn merge_complete_sign_partitions(formulas: Vec<Formula>) -> Vec<Formula> {
     }
 
     formulas
+}
+
+fn merge_adjacent_sign_relations(mut formulas: Vec<Formula>) -> Vec<Formula> {
+    loop {
+        let mut merged = false;
+        'candidate: for index in 0..formulas.len() {
+            let Formula::Atom(atom) = &formulas[index] else {
+                continue;
+            };
+            let polynomial = atom.polynomial.clone();
+            let replacement = match atom.relation {
+                Relation::Less => Relation::LessOrEqual,
+                Relation::Greater => Relation::GreaterOrEqual,
+                _ => continue,
+            };
+            let Some(equal_index) = formulas.iter().position(|formula| {
+                matches!(
+                    formula,
+                    Formula::Atom(other)
+                        if other.polynomial == polynomial
+                            && other.relation == Relation::Equal
+                )
+            }) else {
+                continue;
+            };
+            if equal_index == index {
+                continue;
+            }
+
+            let first = index.min(equal_index);
+            let second = index.max(equal_index);
+            formulas.remove(second);
+            formulas[first] = Formula::atom(polynomial, replacement);
+            merged = true;
+            break 'candidate;
+        }
+        if !merged {
+            return formulas;
+        }
+    }
 }
