@@ -160,11 +160,18 @@ fn recursively_eliminates_vieta_sum_and_product_constraints() {
             1,
             Formula::And(vec![
                 Formula::atom(x2.clone() - x0.clone() - x1.clone(), Relation::Equal),
-                Formula::atom(x3 - x0 * x1, Relation::Equal),
+                Formula::atom(x3.clone() - x0 * x1, Relation::Equal),
             ]),
         ),
     );
     let eliminated = eliminate(&formula).unwrap();
+    assert_eq!(
+        eliminated,
+        Formula::atom(
+            x2.clone() * x2 - Polynomial::integer(4) * x3,
+            Relation::GreaterOrEqual
+        )
+    );
 
     for ((sum, product), expected) in [((-3, 1), true), ((0, 1), false)] {
         let mut values = BTreeMap::new();

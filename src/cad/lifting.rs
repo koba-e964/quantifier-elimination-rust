@@ -112,10 +112,17 @@ impl RecursiveLifting {
             &mut BTreeMap::new(),
             &mut Vec::new(),
         )?;
-        Ok(match conditions.len() {
+        if let Some(candidate) = minimize_validated_conditions(&conditions) {
+            return Ok(candidate);
+        }
+        let accepted_conditions = conditions
+            .into_iter()
+            .filter_map(|(condition, accepted)| accepted.then_some(condition))
+            .collect::<Vec<_>>();
+        Ok(match accepted_conditions.len() {
             0 => Formula::False,
-            1 => conditions.pop().unwrap(),
-            _ => Formula::Or(conditions),
+            1 => accepted_conditions.into_iter().next().unwrap(),
+            _ => Formula::Or(accepted_conditions),
         })
     }
 }
@@ -641,7 +648,7 @@ struct QuantifiedConditionContext<'a> {
     body: &'a Formula,
     quantifier: Quantifier,
     quantified_index: usize,
-    result: &'a mut Vec<Formula>,
+    result: &'a mut Vec<(Formula, bool)>,
 }
 
 fn collect_quantified_conditions(
@@ -665,13 +672,14 @@ fn collect_quantified_conditions(
             Quantifier::Exists => truth_values.iter().any(|value| *value),
             Quantifier::Forall => truth_values.iter().all(|value| *value),
         };
-        if accepted {
-            context.result.push(match path_conditions.len() {
+        context.result.push((
+            match path_conditions.len() {
                 0 => Formula::True,
                 1 => path_conditions[0].clone(),
                 _ => Formula::And(path_conditions.clone()),
-            });
-        }
+            },
+            accepted,
+        ));
         return Ok(());
     }
 
@@ -695,6 +703,85 @@ fn collect_quantified_conditions(
         values.remove(&variable);
     }
     Ok(())
+}
+
+fn minimize_validated_conditions(paths: &[(Formula, bool)]) -> Option<Formula> {
+    if paths.iter().all(|(_, accepted)| *accepted) {
+        return Some(Formula::True);
+    }
+    if paths.iter().all(|(_, accepted)| !*accepted) {
+        return Some(Formula::False);
+    }
+
+    let mut candidates = Vec::new();
+    for (condition, _) in paths {
+        collect_sign_candidates(condition, &mut candidates);
+    }
+    candidates.dedup();
+
+    candidates.into_iter().find(|candidate| {
+        paths
+            .iter()
+            .all(|(condition, accepted)| candidate_holds_on_cell(candidate, condition) == *accepted)
+    })
+}
+
+fn collect_sign_candidates(condition: &Formula, candidates: &mut Vec<Formula>) {
+    match condition {
+        Formula::Atom(atom) => {
+            if matches!(
+                atom.relation,
+                Relation::Less | Relation::Equal | Relation::Greater
+            ) {
+                candidates.push(Formula::atom(atom.polynomial.clone(), atom.relation));
+                if matches!(atom.relation, Relation::Less | Relation::Equal) {
+                    candidates.push(Formula::atom(
+                        atom.polynomial.clone(),
+                        Relation::LessOrEqual,
+                    ));
+                }
+                if matches!(atom.relation, Relation::Greater | Relation::Equal) {
+                    candidates.push(Formula::atom(
+                        atom.polynomial.clone(),
+                        Relation::GreaterOrEqual,
+                    ));
+                }
+            }
+        }
+        Formula::And(formulas) | Formula::Or(formulas) => {
+            for formula in formulas {
+                collect_sign_candidates(formula, candidates);
+            }
+        }
+        Formula::Not(body) => collect_sign_candidates(body, candidates),
+        Formula::True | Formula::False | Formula::Quantified { .. } => {}
+    }
+}
+
+fn candidate_holds_on_cell(candidate: &Formula, condition: &Formula) -> bool {
+    let Formula::Atom(candidate_atom) = candidate else {
+        return false;
+    };
+    let Some(sign) = find_cell_sign(condition, &candidate_atom.polynomial) else {
+        return false;
+    };
+    relation_holds(sign, candidate_atom.relation)
+}
+
+fn find_cell_sign(condition: &Formula, polynomial: &Polynomial) -> Option<std::cmp::Ordering> {
+    match condition {
+        Formula::Atom(atom) if atom.polynomial == *polynomial => Some(match atom.relation {
+            Relation::Less => std::cmp::Ordering::Less,
+            Relation::Equal => std::cmp::Ordering::Equal,
+            Relation::Greater => std::cmp::Ordering::Greater,
+            _ => return None,
+        }),
+        Formula::And(formulas) | Formula::Or(formulas) => formulas
+            .iter()
+            .find_map(|formula| find_cell_sign(formula, polynomial)),
+        Formula::Not(body) => find_cell_sign(body, polynomial),
+        _ => None,
+    }
 }
 
 fn recursive_cell_condition(
