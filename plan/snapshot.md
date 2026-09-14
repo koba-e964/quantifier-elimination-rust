@@ -32,4 +32,4 @@ Current step: Step 5 — finalize.
 ## Step 5: Finalize
 
 - [x] Review snapshot readability and remove unstable assertions.
-- [ ] Push only after all snapshot work and validation are complete.
+- [x] Push after all snapshot work and validation are complete.
