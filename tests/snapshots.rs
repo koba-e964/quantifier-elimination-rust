@@ -51,6 +51,14 @@ fn snapshots_nested_quantifier_output() {
 }
 
 #[test]
+fn snapshots_vieta_quadratic_root_condition() {
+    insta::assert_snapshot!(
+        "vieta_quadratic_root_condition",
+        run_cli("exists x0. exists x1. x2=x0+x1&&x3=x0*x1")
+    );
+}
+
+#[test]
 fn snapshots_parse_error_output() {
     insta::assert_snapshot!("parse_error_output", run_cli("x0 ="));
 }
