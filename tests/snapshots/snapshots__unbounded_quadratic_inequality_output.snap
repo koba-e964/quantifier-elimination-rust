@@ -1,0 +1,8 @@
+---
+source: tests/snapshots.rs
+expression: "run_cli_args([\"--variable-order=y\", \"exists x. x^2 + y > -1\"])"
+---
+status: exit status: 0
+stdout:
+true
+stderr:

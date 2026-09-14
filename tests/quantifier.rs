@@ -455,6 +455,22 @@ fn handles_universal_strict_inequalities_and_disequalities() {
 }
 
 #[test]
+fn eliminates_existential_quadratic_strict_inequality_with_unbounded_witnesses() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    // For every y, a sufficiently large x makes x^2 + y + 1 positive.
+    let formula = Formula::exists(
+        0,
+        Formula::atom(
+            x.clone() * x + y + Polynomial::integer(1),
+            Relation::Greater,
+        ),
+    );
+
+    assert_eq!(eliminate(&formula).unwrap(), Formula::True);
+}
+
+#[test]
 fn eliminates_quadratic_lifting_over_an_irrational_base_section() {
     let x = Polynomial::variable(0);
     let y = Polynomial::variable(1);

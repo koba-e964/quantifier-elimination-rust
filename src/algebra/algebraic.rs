@@ -1,7 +1,8 @@
 use super::univariate::{RootInterval, UnivariatePolynomial};
 use num_bigint::BigInt;
+use num_integer::Integer;
 use num_rational::BigRational;
-use num_traits::{Signed, Zero};
+use num_traits::{One, Signed, Zero};
 use std::cmp::Ordering;
 
 /// An exact real algebraic number represented by a defining polynomial and an
@@ -103,6 +104,9 @@ impl AlgebraicReal {
     }
 
     pub fn rational_value(&self) -> Option<num_rational::BigRational> {
+        if let Some(root) = rational_root_in_interval(&self.polynomial, &self.interval) {
+            return Some(root);
+        }
         let midpoint = (&self.interval.lower + &self.interval.upper) / num_bigint::BigInt::from(2);
         for value in [&self.interval.lower, &self.interval.upper, &midpoint] {
             if self.polynomial.evaluate(value).is_zero() {
@@ -167,6 +171,156 @@ impl AlgebraicReal {
             left = left.refine(&width);
             right = right.refine(&width);
         }
+    }
+}
+
+fn rational_root_in_interval(
+    polynomial: &UnivariatePolynomial,
+    interval: &RootInterval,
+) -> Option<BigRational> {
+    let degree = polynomial.degree()?;
+    if degree == 0 {
+        return None;
+    }
+    let scale = (0..=degree).fold(BigInt::one(), |scale, degree| {
+        scale.lcm(polynomial.coefficient(degree).denom())
+    });
+    let integer_coefficients = (0..=degree)
+        .map(|degree| {
+            polynomial.coefficient(degree).numer()
+                * (&scale / polynomial.coefficient(degree).denom())
+        })
+        .collect::<Vec<_>>();
+    let constant = integer_coefficients[0].abs();
+    let leading = integer_coefficients[degree].abs();
+    if leading.is_zero() {
+        return None;
+    }
+    if constant.is_zero() {
+        let root = BigRational::zero();
+        return (interval.lower <= root && root <= interval.upper).then_some(root);
+    }
+    for numerator in positive_divisors(&constant) {
+        for denominator in positive_divisors(&leading) {
+            for signed_numerator in [numerator.clone(), -numerator.clone()] {
+                let root = BigRational::new(signed_numerator, denominator.clone());
+                if interval.lower <= root
+                    && root <= interval.upper
+                    && polynomial.evaluate(&root).is_zero()
+                {
+                    return Some(root);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn positive_divisors(value: &BigInt) -> Vec<BigInt> {
+    // TODO: replace trial division with an efficient integer factorization/divisor generator.
+    let mut divisors = Vec::new();
+    let mut candidate = BigInt::one();
+    while &candidate * &candidate <= *value {
+        let (quotient, remainder) = value.div_rem(&candidate);
+        if remainder.is_zero() {
+            divisors.push(candidate.clone());
+            if quotient != candidate {
+                divisors.push(quotient);
+            }
+        }
+        candidate += BigInt::one();
+    }
+    divisors
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn finds_rational_roots_inside_intervals() {
+        // x^2 - 2x - 3 = 0 has the root -1 in [-2, 2].
+        let polynomial = UnivariatePolynomial::from_integers(&[-3, -2, 1]);
+        let interval = RootInterval::new(
+            BigRational::from_integer((-2).into()),
+            BigRational::from_integer(2.into()),
+        );
+
+        assert_eq!(
+            rational_root_in_interval(&polynomial, &interval),
+            Some(BigRational::from_integer((-1).into()))
+        );
+    }
+
+    #[test]
+    fn finds_degree_three_rational_roots() {
+        // x^3 - 6x^2 + 11x - 6 = 0 has the root 2 in [3/2, 5/2].
+        let integer_root = UnivariatePolynomial::from_integers(&[-6, 11, -6, 1]);
+        let integer_interval = RootInterval::new(
+            BigRational::new(3.into(), 2.into()),
+            BigRational::new(5.into(), 2.into()),
+        );
+        assert_eq!(
+            rational_root_in_interval(&integer_root, &integer_interval),
+            Some(BigRational::from_integer(2.into()))
+        );
+
+        // x^3 - 1/8 = 0 has the non-integral rational root 1/2 in [0, 1].
+        let non_integral_root = UnivariatePolynomial::new(vec![
+            BigRational::new((-1).into(), 8.into()),
+            BigRational::zero(),
+            BigRational::zero(),
+            BigRational::one(),
+        ]);
+        let positive_interval = RootInterval::new(BigRational::zero(), BigRational::one());
+        assert_eq!(
+            rational_root_in_interval(&non_integral_root, &positive_interval),
+            Some(BigRational::new(1.into(), 2.into()))
+        );
+
+        // x^3 - 2 = 0 has no rational root in [1, 2].
+        let irrational_root = UnivariatePolynomial::from_integers(&[-2, 0, 0, 1]);
+        assert_eq!(
+            rational_root_in_interval(&irrational_root, &positive_interval),
+            None
+        );
+    }
+
+    #[test]
+    fn handles_rational_root_edge_cases() {
+        // x^2 = 0 has the root 0 in [-1, 1].
+        let zero = UnivariatePolynomial::from_integers(&[0, 0, 1]);
+        let wide_interval = RootInterval::new(
+            BigRational::from_integer((-1).into()),
+            BigRational::from_integer(1.into()),
+        );
+        assert_eq!(
+            rational_root_in_interval(&zero, &wide_interval),
+            Some(BigRational::zero())
+        );
+
+        // x^2 - 1/4 = 0 has the root 1/2 in [0, 1].
+        let half = UnivariatePolynomial::new(vec![
+            BigRational::new((-1).into(), 4.into()),
+            BigRational::zero(),
+            BigRational::one(),
+        ]);
+        let positive_interval = RootInterval::new(BigRational::zero(), BigRational::one());
+        assert_eq!(
+            rational_root_in_interval(&half, &positive_interval),
+            Some(BigRational::new(1.into(), 2.into()))
+        );
+
+        // x^2 - 2 = 0 has no rational root in [1, 2].
+        let irrational = UnivariatePolynomial::from_integers(&[-2, 0, 1]);
+        assert_eq!(
+            rational_root_in_interval(&irrational, &positive_interval),
+            None
+        );
+
+        // The nonzero constant 1 has no root in [-1, 1].
+        let constant = UnivariatePolynomial::from_integers(&[1]);
+        assert_eq!(rational_root_in_interval(&constant, &wide_interval), None);
     }
 }
 

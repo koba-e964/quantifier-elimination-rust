@@ -498,7 +498,12 @@ pub fn lift_two_variables(
             }
         }
         let mut values = std::collections::BTreeMap::new();
-        values.insert(variable_order[0], cell.sample.clone());
+        let sample = cell
+            .exact_sample
+            .as_ref()
+            .and_then(AlgebraicReal::rational_value)
+            .unwrap_or_else(|| cell.sample.clone());
+        values.insert(variable_order[0], sample);
         let specialized = original
             .iter()
             .map(|polynomial| specialize_to_univariate(polynomial, variable_order[1], &values))

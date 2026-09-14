@@ -59,6 +59,14 @@ fn snapshots_named_variable_output() {
 }
 
 #[test]
+fn snapshots_unbounded_quadratic_inequality_output() {
+    insta::assert_snapshot!(
+        "unbounded_quadratic_inequality_output",
+        run_cli_args(["--variable-order=y", "exists x. x^2 + y > -1"])
+    );
+}
+
+#[test]
 fn snapshots_nested_quantifier_output() {
     insta::assert_snapshot!(
         "nested_quantifier_output",

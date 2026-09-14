@@ -1,7 +1,7 @@
 use num_rational::BigRational;
 use std::cmp::Ordering;
 
-use num_traits::Zero;
+use num_traits::{One, Zero};
 use quantifier_elimination::{AlgebraicPolynomial, AlgebraicRootSample, ExactReal};
 
 #[test]
@@ -15,6 +15,116 @@ fn models_polynomials_with_exact_real_coefficients() {
     assert_eq!(polynomial.degree(), Some(1));
     // A degree-one polynomial has two stored coefficients, including its constant term.
     assert_eq!(polynomial.coefficients().len(), 2);
+}
+
+#[test]
+fn identifies_rational_roots_inside_wide_intervals() {
+    // A linear root need not occur at an interval endpoint or midpoint.
+    let polynomial = quantifier_elimination::UnivariatePolynomial::from_integers(&[1, 1]);
+    let interval = quantifier_elimination::RootInterval::new(
+        BigRational::from_integer((-2).into()),
+        BigRational::from_integer(2.into()),
+    );
+    let algebraic = quantifier_elimination::AlgebraicReal::new(polynomial, interval);
+
+    assert_eq!(
+        algebraic.rational_value(),
+        Some(BigRational::from_integer((-1).into()))
+    );
+
+    // The quadratic roots are -1 and 3; this interval isolates the rational root -1.
+    let polynomial = quantifier_elimination::UnivariatePolynomial::from_integers(&[-3, -2, 1]);
+    let interval = quantifier_elimination::RootInterval::new(
+        BigRational::from_integer((-2).into()),
+        BigRational::from_integer(2.into()),
+    );
+    let algebraic = quantifier_elimination::AlgebraicReal::new(polynomial, interval);
+
+    assert_eq!(
+        algebraic.rational_value(),
+        Some(BigRational::from_integer((-1).into()))
+    );
+}
+
+#[test]
+fn rational_root_detection_handles_edge_cases() {
+    // (x - 1)^2 = 0 has the repeated rational root 1 in [0, 2].
+    let repeated = quantifier_elimination::UnivariatePolynomial::from_integers(&[1, -2, 1]);
+    let repeated_root = quantifier_elimination::AlgebraicReal::new(
+        repeated,
+        quantifier_elimination::RootInterval::new(
+            BigRational::zero(),
+            BigRational::from_integer(2.into()),
+        ),
+    );
+    assert_eq!(
+        repeated_root.rational_value(),
+        Some(BigRational::from_integer(1.into()))
+    );
+
+    // x^2 = 0 has the repeated rational root 0 in [-1, 1].
+    let zero_root = quantifier_elimination::AlgebraicReal::new(
+        quantifier_elimination::UnivariatePolynomial::from_integers(&[0, 0, 1]),
+        quantifier_elimination::RootInterval::new(
+            BigRational::from_integer((-1).into()),
+            BigRational::from_integer(1.into()),
+        ),
+    );
+    assert_eq!(zero_root.rational_value(), Some(BigRational::zero()));
+
+    // x^2 - 1/4 = 0 has the root 1/2 in [0, 1].
+    let half_root = quantifier_elimination::AlgebraicReal::new(
+        quantifier_elimination::UnivariatePolynomial::new(vec![
+            BigRational::new((-1).into(), 4.into()),
+            BigRational::zero(),
+            BigRational::one(),
+        ]),
+        quantifier_elimination::RootInterval::new(BigRational::zero(), BigRational::one()),
+    );
+    assert_eq!(
+        half_root.rational_value(),
+        Some(BigRational::new(1.into(), 2.into()))
+    );
+
+    // x^2 - 1 = 0 has the root 1 exactly at the lower boundary of [1, 2].
+    let boundary_root = quantifier_elimination::AlgebraicReal::new(
+        quantifier_elimination::UnivariatePolynomial::from_integers(&[-1, 0, 1]),
+        quantifier_elimination::RootInterval::new(
+            BigRational::one(),
+            BigRational::from_integer(2.into()),
+        ),
+    );
+    assert_eq!(boundary_root.rational_value(), Some(BigRational::one()));
+
+    // x^2 - 2 = 0 has the irrational root sqrt(2) in [1, 2].
+    let irrational_root = quantifier_elimination::AlgebraicReal::new(
+        quantifier_elimination::UnivariatePolynomial::from_integers(&[-2, 0, 1]),
+        quantifier_elimination::RootInterval::new(
+            BigRational::one(),
+            BigRational::from_integer(2.into()),
+        ),
+    );
+    assert_eq!(irrational_root.rational_value(), None);
+
+    // x^2 - 1 = 0 has no root in [2, 3], so no rational value is returned.
+    let outside_root = quantifier_elimination::AlgebraicReal::new(
+        quantifier_elimination::UnivariatePolynomial::from_integers(&[-1, 0, 1]),
+        quantifier_elimination::RootInterval::new(
+            BigRational::from_integer(2.into()),
+            BigRational::from_integer(3.into()),
+        ),
+    );
+    assert_eq!(outside_root.rational_value(), None);
+
+    // The nonzero constant 1 has no root, even though [-1, 1] contains zero.
+    let constant = quantifier_elimination::AlgebraicReal::new(
+        quantifier_elimination::UnivariatePolynomial::from_integers(&[1]),
+        quantifier_elimination::RootInterval::new(
+            BigRational::from_integer((-1).into()),
+            BigRational::from_integer(1.into()),
+        ),
+    );
+    assert_eq!(constant.rational_value(), None);
 }
 
 #[test]
