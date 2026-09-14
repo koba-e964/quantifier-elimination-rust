@@ -88,3 +88,18 @@ fn applies_symmetric_special_handling_before_cad() {
     );
     assert!(String::from_utf8_lossy(&output.stderr).contains("cells constructed: 0"));
 }
+
+#[test]
+fn reports_an_explicit_variable_order() {
+    let output = Command::new(env!("CARGO_BIN_EXE_qe"))
+        .args([
+            "--stats",
+            "--variable-order=x2,x0",
+            "exists x1. x1^2 + x0 + x2 = 0",
+        ])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("lifting order 0: x2 -> x0 -> x1"));
+}

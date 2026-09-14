@@ -14,3 +14,5 @@ stats:
   section cells: 11
   projection levels: 3
   projection polynomials: 10
+  lifting order count: 1
+  lifting order 0: x0 -> x2 -> x1

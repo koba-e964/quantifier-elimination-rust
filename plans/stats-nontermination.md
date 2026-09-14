@@ -1,6 +1,6 @@
 # Stats and non-terminating simple formulas
 
-Current step: Step 3 — integrate the validated symmetric reducer into special handling.
+Current step: Step 2 — define a deterministic elimination-order policy.
 
 ## Observed issue
 
@@ -25,13 +25,13 @@ the sum/product/square relationship.
 
 ## Step 2: Control elimination order
 
-- [ ] Separate quantified-variable order from free-variable order in the
+- [x] Separate quantified-variable order from free-variable order in the
   recursive CAD dispatcher.
-- [ ] Record the current order and candidate orders in the stats report.
+- [x] Record the current order and candidate orders in the stats report.
 - [ ] Define a deterministic order-selection policy that prioritizes the
   variables constrained by the current quantified body and avoids unnecessary
   lifting dimensions.
-- [ ] Add an explicit order override for reproducible experiments.
+- [x] Add an explicit order override for reproducible experiments.
 - [ ] Verify that changing the order preserves exact semantic results.
 
 ## Step 3: Add special handling for simple cases
@@ -46,12 +46,12 @@ the sum/product/square relationship.
   reduce every symmetric polynomial in `x0` and `x1` to a polynomial in `s`
   and `p`. For example, `x0^2 + x1^2` becomes `s^2 - 2*p`, while
   `x0^3 + x1^3` becomes `s^3 - 3*p*s`.
-- [ ] Always emit the real-root condition `s^2 - 4*p >= 0` when eliminating
+- [x] Always emit the real-root condition `s^2 - 4*p >= 0` when eliminating
   existential witnesses `x0` and `x1`.
-- [ ] Treat existential quantification of both witness variables as a required
+- [x] Treat existential quantification of both witness variables as a required
   rule precondition; do not apply the elimination rewrite to free or universal
   `x0`/`x1` variables.
-- [ ] Reject or fall back cleanly for non-symmetric expressions; do not apply a
+- [x] Reject or fall back cleanly for non-symmetric expressions; do not apply a
   partial rewrite to a polynomial that changes under swapping `x0` and `x1`.
 - [x] Keep special rules guarded: unsupported shapes must fall back to the
   general exact elimination path.
@@ -95,4 +95,5 @@ the sum/product/square relationship.
 
 - [x] Show the literal diff for each logical implementation slice.
 - [x] Wait for approval before committing in commit+review mode.
-- [x] Record implementation commit `fdbd05e` and keep elimination-order/configuration work pending.
+- [x] Record implementation commit `991e3f4` for special handling.
+- [x] Record implementation commit `4a99f43` for elimination-order reporting and override support.

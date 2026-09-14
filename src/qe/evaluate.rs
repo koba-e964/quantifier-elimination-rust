@@ -29,17 +29,20 @@ pub struct EliminationStats {
     pub section_cells: usize,
     pub projection_levels: usize,
     pub projection_polynomials: usize,
+    pub lifting_orders: Vec<Vec<usize>>,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct EliminationOptions {
     pub special_handling: bool,
+    pub variable_order: Option<Vec<usize>>,
 }
 
 impl Default for EliminationOptions {
     fn default() -> Self {
         Self {
             special_handling: true,
+            variable_order: None,
         }
     }
 }
@@ -75,6 +78,8 @@ impl EliminationStats {
 
     fn record_recursive_lifting(&mut self, lifting: &RecursiveLifting) {
         self.record_projection_stack(&lifting.projection_stack);
+        self.lifting_orders
+            .push(lifting.projection_stack.variable_order.clone());
         for cell in &lifting.cells {
             self.record_cad_cell(cell);
         }
@@ -187,7 +192,7 @@ pub fn eliminate_with_options(
             return Ok((result, stats));
         }
     }
-    let result = eliminate_recursive(formula, &mut stats)?;
+    let result = eliminate_recursive(formula, &mut stats, options)?;
     Ok((result, stats))
 }
 
@@ -294,6 +299,7 @@ fn is_product_binding(atom: &Atom, left: usize, right: usize, alias: usize) -> b
 fn eliminate_recursive(
     formula: &Formula,
     stats: &mut EliminationStats,
+    options: EliminationOptions,
 ) -> Result<Formula, QuantifierEvaluationError> {
     stats.quantifier_calls += 1;
     let Formula::Quantified {
@@ -305,7 +311,7 @@ fn eliminate_recursive(
         return Err(QuantifierEvaluationError::WrongVariable);
     };
 
-    let body = simplify(&eliminate_nested_children(body, stats)?);
+    let body = simplify(&eliminate_nested_children(body, stats, options.clone())?);
     if !body.free_variables().contains(variable) {
         return Ok(simplify(&body));
     }
@@ -326,9 +332,13 @@ fn eliminate_recursive(
     if let Some(eliminated) = eliminate_exists_linear_inequalities(&reduced, *variable) {
         return Ok(simplify(&eliminated));
     }
-    if let Some(eliminated) =
-        eliminate_supported_boolean_branches(*quantifier, *variable, &reduced, stats)
-    {
+    if let Some(eliminated) = eliminate_supported_boolean_branches(
+        *quantifier,
+        *variable,
+        &reduced,
+        stats,
+        options.clone(),
+    ) {
         return Ok(simplify(&eliminated?));
     }
     if let Some(eliminated) = eliminate_linear_atom(&reduced, *variable) {
@@ -349,7 +359,18 @@ fn eliminate_recursive(
             stats,
         )
     } else {
-        let mut variable_order = free_variables.iter().copied().collect::<Vec<_>>();
+        let mut variable_order = options
+            .variable_order
+            .clone()
+            .filter(|order| {
+                order.len() == free_variables.len()
+                    && order
+                        .iter()
+                        .copied()
+                        .collect::<std::collections::BTreeSet<_>>()
+                        == free_variables
+            })
+            .unwrap_or_else(|| free_variables.iter().copied().collect::<Vec<_>>());
         variable_order.push(*variable);
         let lifting = lift_recursive(&reduced, &variable_order)?;
         stats.record_recursive_lifting(&lifting);
@@ -559,6 +580,7 @@ fn eliminate_supported_boolean_branches(
     variable: usize,
     formula: &Formula,
     stats: &mut EliminationStats,
+    options: EliminationOptions,
 ) -> Option<Result<Formula, QuantifierEvaluationError>> {
     let Formula::Quantified { body, .. } = formula else {
         return None;
@@ -568,7 +590,11 @@ fn eliminate_supported_boolean_branches(
             branches
                 .iter()
                 .map(|branch| {
-                    eliminate_recursive(&Formula::exists(variable, branch.clone()), stats)
+                    eliminate_recursive(
+                        &Formula::exists(variable, branch.clone()),
+                        stats,
+                        options.clone(),
+                    )
                 })
                 .collect::<Result<Vec<_>, _>>()
                 .map(Formula::Or),
@@ -577,7 +603,11 @@ fn eliminate_supported_boolean_branches(
             branches
                 .iter()
                 .map(|branch| {
-                    eliminate_recursive(&Formula::forall(variable, branch.clone()), stats)
+                    eliminate_recursive(
+                        &Formula::forall(variable, branch.clone()),
+                        stats,
+                        options.clone(),
+                    )
                 })
                 .collect::<Result<Vec<_>, _>>()
                 .map(Formula::And),
@@ -593,7 +623,7 @@ fn eliminate_supported_boolean_branches(
             let guard = simplify(&Formula::And(independent));
             let quantified = Formula::exists(variable, simplify(&Formula::And(dependent)));
             Some(
-                eliminate_recursive(&quantified, stats)
+                eliminate_recursive(&quantified, stats, options.clone())
                     .map(|result| Formula::And(vec![guard, result])),
             )
         }
@@ -612,7 +642,7 @@ fn eliminate_supported_boolean_branches(
                 );
                 let quantified = Formula::exists(variable, negated);
                 return Some(
-                    eliminate_recursive(&quantified, stats)
+                    eliminate_recursive(&quantified, stats, options.clone())
                         .map(|result| Formula::Not(Box::new(result))),
                 );
             }
@@ -622,17 +652,25 @@ fn eliminate_supported_boolean_branches(
             let guard = simplify(&Formula::Or(independent));
             let quantified = Formula::forall(variable, simplify(&Formula::Or(dependent)));
             Some(
-                eliminate_recursive(&quantified, stats)
+                eliminate_recursive(&quantified, stats, options.clone())
                     .map(|result| Formula::Or(vec![guard, result])),
             )
         }
         (Quantifier::Exists, Formula::Not(inner)) => Some(
-            eliminate_recursive(&Formula::forall(variable, inner.as_ref().clone()), stats)
-                .map(|result| Formula::Not(Box::new(result))),
+            eliminate_recursive(
+                &Formula::forall(variable, inner.as_ref().clone()),
+                stats,
+                options.clone(),
+            )
+            .map(|result| Formula::Not(Box::new(result))),
         ),
         (Quantifier::Forall, Formula::Not(inner)) => Some(
-            eliminate_recursive(&Formula::exists(variable, inner.as_ref().clone()), stats)
-                .map(|result| Formula::Not(Box::new(result))),
+            eliminate_recursive(
+                &Formula::exists(variable, inner.as_ref().clone()),
+                stats,
+                options.clone(),
+            )
+            .map(|result| Formula::Not(Box::new(result))),
         ),
         _ => None,
     }
@@ -734,23 +772,28 @@ fn negate_relation(relation: crate::formula::Relation) -> crate::formula::Relati
 fn eliminate_nested_children(
     formula: &Formula,
     stats: &mut EliminationStats,
+    options: EliminationOptions,
 ) -> Result<Formula, QuantifierEvaluationError> {
     Ok(match formula {
         Formula::True | Formula::False | Formula::Atom(_) => formula.clone(),
-        Formula::Not(body) => Formula::Not(Box::new(eliminate_nested_children(body, stats)?)),
+        Formula::Not(body) => Formula::Not(Box::new(eliminate_nested_children(
+            body,
+            stats,
+            options.clone(),
+        )?)),
         Formula::And(formulas) => Formula::And(
             formulas
                 .iter()
-                .map(|formula| eliminate_nested_children(formula, stats))
+                .map(|formula| eliminate_nested_children(formula, stats, options.clone()))
                 .collect::<Result<_, _>>()?,
         ),
         Formula::Or(formulas) => Formula::Or(
             formulas
                 .iter()
-                .map(|formula| eliminate_nested_children(formula, stats))
+                .map(|formula| eliminate_nested_children(formula, stats, options.clone()))
                 .collect::<Result<_, _>>()?,
         ),
-        Formula::Quantified { .. } => eliminate_recursive(formula, stats)?,
+        Formula::Quantified { .. } => eliminate_recursive(formula, stats, options.clone())?,
     })
 }
 

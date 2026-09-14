@@ -9,7 +9,7 @@ fn main() {
         .iter()
         .any(|argument| argument == "--help" || argument == "-h")
     {
-        println!("usage: qe [--stats] [--special-handling=true|false] [FORMULA]\n       printf '%s' FORMULA | qe [--stats]");
+        println!("usage: qe [--stats] [--special-handling=true|false] [--variable-order=xN,xN,...] [FORMULA]\n       printf '%s' FORMULA | qe [--stats]");
         return;
     }
 
@@ -17,12 +17,20 @@ fn main() {
     let special_handling = !arguments
         .iter()
         .any(|argument| argument == "--special-handling=false");
+    let variable_order = match parse_variable_order(&arguments) {
+        Ok(order) => order,
+        Err(error) => {
+            eprintln!("qe: {error}");
+            std::process::exit(2);
+        }
+    };
     let arguments = arguments
         .into_iter()
         .filter(|argument| {
             argument != "--stats"
                 && argument != "--special-handling=true"
                 && argument != "--special-handling=false"
+                && !argument.starts_with("--variable-order=")
         })
         .collect::<Vec<_>>();
 
@@ -44,7 +52,13 @@ fn main() {
             std::process::exit(2);
         }
     };
-    match eliminate_with_options(&formula, EliminationOptions { special_handling }) {
+    match eliminate_with_options(
+        &formula,
+        EliminationOptions {
+            special_handling,
+            variable_order,
+        },
+    ) {
         Ok((result, stats)) => {
             println!("{}", format_formula(&result));
             if show_stats {
@@ -58,9 +72,58 @@ fn main() {
     }
 }
 
+fn parse_variable_order(arguments: &[String]) -> Result<Option<Vec<usize>>, String> {
+    let Some(argument) = arguments
+        .iter()
+        .find(|argument| argument.starts_with("--variable-order="))
+    else {
+        return Ok(None);
+    };
+    let value = argument.trim_start_matches("--variable-order=");
+    if value.is_empty() {
+        return Err("--variable-order requires a comma-separated list".to_owned());
+    }
+    value
+        .split(',')
+        .map(|item| {
+            item.strip_prefix('x')
+                .unwrap_or(item)
+                .parse::<usize>()
+                .map_err(|_| format!("invalid variable in --variable-order: {item}"))
+        })
+        .collect::<Result<Vec<_>, _>>()
+        .map(Some)
+}
+
 fn format_stats(stats: &EliminationStats) -> String {
+    let lifting_orders = if stats.lifting_orders.is_empty() {
+        String::new()
+    } else {
+        let lifting_order_lines = stats
+            .lifting_orders
+            .iter()
+            .enumerate()
+            .map(|(index, order)| {
+                format!(
+                    "\n  lifting order {}: {}",
+                    index,
+                    order
+                        .iter()
+                        .map(|variable| format!("x{variable}"))
+                        .collect::<Vec<_>>()
+                        .join(" -> ")
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("");
+        format!(
+            "\n  lifting order count: {}{}",
+            stats.lifting_orders.len(),
+            lifting_order_lines
+        )
+    };
     format!(
-        "stats:\n  quantifier calls: {}\n  cells constructed: {}\n  leaf cells: {}\n  sector cells: {}\n  section cells: {}\n  projection levels: {}\n  projection polynomials: {}",
+        "stats:\n  quantifier calls: {}\n  cells constructed: {}\n  leaf cells: {}\n  sector cells: {}\n  section cells: {}\n  projection levels: {}\n  projection polynomials: {}{}",
         stats.quantifier_calls,
         stats.cells_constructed,
         stats.leaf_cells,
@@ -68,6 +131,7 @@ fn format_stats(stats: &EliminationStats) -> String {
         stats.section_cells,
         stats.projection_levels,
         stats.projection_polynomials,
+        lifting_orders,
     )
 }
 
