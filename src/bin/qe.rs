@@ -1,6 +1,6 @@
 use quantifier_elimination::{
-    eliminate_with_options, parse_formula, EliminationOptions, EliminationStats, Formula, Relation,
-    SpecialHandlingConfig,
+    eliminate_with_options, parse_formula_with_names, EliminationOptions, EliminationStats,
+    Formula, ParsedFormula, Relation, SpecialHandlingConfig, VariableNames,
 };
 use std::io::Read;
 
@@ -18,7 +18,7 @@ fn main() {
     let special_handling = !arguments
         .iter()
         .any(|argument| argument == "--special-handling=false");
-    let variable_order = match parse_variable_order(&arguments) {
+    let variable_order_names = match parse_variable_order(&arguments) {
         Ok(order) => order,
         Err(error) => {
             eprintln!("qe: {error}");
@@ -54,19 +54,26 @@ fn main() {
         arguments.join(" ")
     };
 
-    let formula = match parse_formula(&input) {
-        Ok(formula) => formula,
+    let parsed = match parse_formula_with_names(&input) {
+        Ok(parsed) => parsed,
         Err(error) => {
             eprintln!("qe: parse error {error}");
             std::process::exit(2);
         }
     };
-    if let Err(error) = validate_variable_order(variable_order.as_ref(), &formula) {
+    let variable_order = match resolve_variable_order(variable_order_names.as_ref(), &parsed) {
+        Ok(order) => order,
+        Err(error) => {
+            eprintln!("qe: {error}");
+            std::process::exit(2);
+        }
+    };
+    if let Err(error) = validate_variable_order(variable_order.as_ref(), &parsed.formula) {
         eprintln!("qe: {error}");
         std::process::exit(2);
     }
     match eliminate_with_options(
-        &formula,
+        &parsed.formula,
         EliminationOptions {
             special_handling,
             special_rules,
@@ -74,9 +81,9 @@ fn main() {
         },
     ) {
         Ok((result, stats)) => {
-            println!("{}", format_formula(&result));
+            println!("{}", format_formula(&result, &parsed.names));
             if show_stats {
-                eprintln!("{}", format_stats(&stats));
+                eprintln!("{}", format_stats(&stats, &parsed.names));
             }
         }
         Err(error) => {
@@ -100,7 +107,7 @@ fn parse_special_rules(arguments: &[String]) -> Result<SpecialHandlingConfig, St
     SpecialHandlingConfig::from_file(path)
 }
 
-fn parse_variable_order(arguments: &[String]) -> Result<Option<Vec<usize>>, String> {
+fn parse_variable_order(arguments: &[String]) -> Result<Option<Vec<String>>, String> {
     let Some(argument) = arguments
         .iter()
         .find(|argument| argument.starts_with("--variable-order="))
@@ -114,13 +121,47 @@ fn parse_variable_order(arguments: &[String]) -> Result<Option<Vec<usize>>, Stri
     value
         .split(',')
         .map(|item| {
-            item.strip_prefix('x')
-                .unwrap_or(item)
-                .parse::<usize>()
-                .map_err(|_| format!("invalid variable in --variable-order: {item}"))
+            if item.is_empty() {
+                Err("invalid empty variable in --variable-order".to_owned())
+            } else {
+                Ok(item.to_owned())
+            }
         })
         .collect::<Result<Vec<_>, _>>()
         .map(Some)
+}
+
+fn resolve_variable_order(
+    order: Option<&Vec<String>>,
+    parsed: &ParsedFormula,
+) -> Result<Option<Vec<usize>>, String> {
+    let Some(order) = order else {
+        return Ok(None);
+    };
+    let free_variables = parsed.formula.free_variables();
+    let mut resolved = Vec::with_capacity(order.len());
+    for name in order {
+        let matches = free_variables
+            .iter()
+            .copied()
+            .filter(|variable| parsed.names.name(*variable) == *name)
+            .collect::<Vec<_>>();
+        match matches.as_slice() {
+            [variable] => resolved.push(*variable),
+            [] => {
+                let expected = free_variables
+                    .iter()
+                    .map(|variable| parsed.names.name(*variable))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                return Err(format!(
+                    "--variable-order must contain exactly the free variables: {{{expected}}}; unknown or bound variable: {name}"
+                ));
+            }
+            _ => return Err(format!("ambiguous variable in --variable-order: {name}")),
+        }
+    }
+    Ok(Some(resolved))
 }
 
 fn validate_variable_order(order: Option<&Vec<usize>>, formula: &Formula) -> Result<(), String> {
@@ -152,7 +193,7 @@ fn validate_variable_order(order: Option<&Vec<usize>>, formula: &Formula) -> Res
     Ok(())
 }
 
-fn format_stats(stats: &EliminationStats) -> String {
+fn format_stats(stats: &EliminationStats, names: &VariableNames) -> String {
     let lifting_orders = if stats.lifting_orders.is_empty() {
         String::new()
     } else {
@@ -166,7 +207,7 @@ fn format_stats(stats: &EliminationStats) -> String {
                     index,
                     order
                         .iter()
-                        .map(|variable| format!("x{variable}"))
+                        .map(|variable| names.name(*variable))
                         .collect::<Vec<_>>()
                         .join(" -> ")
                 )
@@ -192,23 +233,27 @@ fn format_stats(stats: &EliminationStats) -> String {
     )
 }
 
-fn format_formula(formula: &Formula) -> String {
+fn format_formula(formula: &Formula, names: &VariableNames) -> String {
     match formula {
         Formula::True => "true".to_owned(),
         Formula::False => "false".to_owned(),
         Formula::Atom(atom) => {
-            format!("{} {} 0", atom.polynomial, format_relation(atom.relation))
+            format!(
+                "{} {} 0",
+                atom.polynomial.to_string_with(names),
+                format_relation(atom.relation)
+            )
         }
-        Formula::Not(body) => format!("!({})", format_formula(body)),
+        Formula::Not(body) => format!("!({})", format_formula(body, names)),
         Formula::And(formulas) => formulas
             .iter()
-            .map(format_formula)
+            .map(|formula| format_formula(formula, names))
             .map(|formula| format!("({formula})"))
             .collect::<Vec<_>>()
             .join(" && "),
         Formula::Or(formulas) => formulas
             .iter()
-            .map(format_formula)
+            .map(|formula| format_formula(formula, names))
             .map(|formula| format!("({formula})"))
             .collect::<Vec<_>>()
             .join(" || "),

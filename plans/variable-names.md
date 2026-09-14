@@ -1,6 +1,6 @@
 # Ergonomic variable names
 
-Current step: Step 3 — preserve names in output.
+Current step: Step 4 — make variable-order overrides name-aware.
 
 ## Step 1: Add a named-parser API
 
@@ -17,15 +17,15 @@ Current step: Step 3 — preserve names in output.
 
 ## Step 3: Preserve names in output
 
-- [ ] Format quantifier-free formulas with parsed variable names.
-- [ ] Format lifting orders with parsed names.
-- [ ] Keep numeric fallback names (`xN`) for unnamed/internal variables.
+- [x] Format quantifier-free formulas with parsed variable names.
+- [x] Format lifting orders with parsed names.
+- [x] Keep numeric fallback names (`xN`) for unnamed/internal variables.
 
 ## Step 4: Make variable-order overrides name-aware
 
-- [ ] Resolve `--variable-order=st,p,x,y` through the parsed free-variable names.
-- [ ] Preserve compatibility with names such as `x2`.
-- [ ] Reject unknown, bound, duplicate, or incomplete names using user-facing names.
+- [x] Resolve `--variable-order=st,p,x,y` through the parsed free-variable names.
+- [x] Preserve compatibility with names such as `x2`.
+- [-] Reject unknown, bound, duplicate, or incomplete names using user-facing names.
 
 ## Step 5: Tests, snapshots, and documentation
 

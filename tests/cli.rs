@@ -75,6 +75,18 @@ fn prints_linear_multivariate_elimination_results() {
 }
 
 #[test]
+fn prints_named_variables_in_results() {
+    let output = Command::new(env!("CARGO_BIN_EXE_qe"))
+        .arg("exists x. x^2 + st + y = 0")
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "st + y <= 0\n");
+    assert!(output.stderr.is_empty());
+}
+
+#[test]
 fn prints_cad_stats_when_requested() {
     let output = Command::new(env!("CARGO_BIN_EXE_qe"))
         .args(["--stats", "exists x1. x1^2 + x0 + x2 = 0"])
@@ -174,6 +186,21 @@ fn reports_an_explicit_variable_order() {
 
     assert!(output.status.success());
     assert!(String::from_utf8_lossy(&output.stderr).contains("lifting order 0: x2 -> x0 -> x1"));
+}
+
+#[test]
+fn accepts_named_variable_order() {
+    let output = Command::new(env!("CARGO_BIN_EXE_qe"))
+        .args([
+            "--stats",
+            "--variable-order=st,y",
+            "exists x. x^2 + st + y = 0",
+        ])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("lifting order 0: st -> y -> x"));
 }
 
 #[test]
