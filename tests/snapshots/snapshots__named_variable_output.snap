@@ -1,0 +1,18 @@
+---
+source: tests/snapshots.rs
+expression: "run_cli_args([\"--stats\", \"--variable-order=st,y\",\n\"exists x. x^2 + st + y = 0\"])"
+---
+status: exit status: 0
+stdout:
+st + y <= 0
+stderr:
+stats:
+  quantifier calls: 1
+  cells constructed: 35
+  leaf cells: 23
+  sector cells: 24
+  section cells: 11
+  projection levels: 3
+  projection polynomials: 10
+  lifting order count: 1
+  lifting order 0: st -> y -> x

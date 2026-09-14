@@ -47,6 +47,18 @@ fn snapshots_multivariate_output() {
 }
 
 #[test]
+fn snapshots_named_variable_output() {
+    insta::assert_snapshot!(
+        "named_variable_output",
+        run_cli_args([
+            "--stats",
+            "--variable-order=st,y",
+            "exists x. x^2 + st + y = 0"
+        ])
+    );
+}
+
+#[test]
 fn snapshots_nested_quantifier_output() {
     insta::assert_snapshot!(
         "nested_quantifier_output",
