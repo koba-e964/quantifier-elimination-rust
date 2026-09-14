@@ -60,3 +60,33 @@ fn parses_named_free_variables_with_display_names() {
     assert_eq!(parsed.names.name(1), "tmp");
     assert_eq!(parsed.names.name(2), "x");
 }
+
+#[test]
+fn resolves_named_quantifiers_and_shadowed_scopes() {
+    let parsed = parse_formula_with_names("exists x. exists x. x = y").unwrap();
+
+    assert_eq!(
+        parsed.formula,
+        Formula::exists(
+            0,
+            Formula::exists(
+                1,
+                Formula::atom(
+                    Polynomial::variable(1) - Polynomial::variable(2),
+                    Relation::Equal,
+                ),
+            ),
+        )
+    );
+    assert_eq!(parsed.names.name(0), "x");
+    assert_eq!(parsed.names.name(1), "x");
+    assert_eq!(parsed.names.name(2), "y");
+}
+
+#[test]
+fn rejects_reserved_words_as_named_variables() {
+    for name in ["exists", "forall", "true", "false"] {
+        let error = parse_formula_with_names(&format!("exists {name}. {name} = 0")).unwrap_err();
+        assert!(error.message.contains("reserved word"), "{name}: {error}");
+    }
+}

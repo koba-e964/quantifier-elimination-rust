@@ -1,6 +1,6 @@
 # Ergonomic variable names
 
-Current step: Step 2 — add lexical name resolution.
+Current step: Step 3 — preserve names in output.
 
 ## Step 1: Add a named-parser API
 
@@ -10,10 +10,10 @@ Current step: Step 2 — add lexical name resolution.
 
 ## Step 2: Add lexical name resolution
 
-- [ ] Accept identifiers such as `x`, `y`, `st`, and `tmp` as variables.
-- [ ] Resolve quantified variables with lexical scopes and fresh internal IDs.
-- [ ] Preserve correct behavior for shadowed names.
-- [ ] Reject reserved words (`exists`, `forall`, `true`, and `false`) as variable names.
+- [x] Accept identifiers such as `x`, `y`, `st`, and `tmp` as variables.
+- [x] Resolve quantified variables with lexical scopes and fresh internal IDs.
+- [x] Preserve correct behavior for shadowed names.
+- [x] Reject reserved words (`exists`, `forall`, `true`, and `false`) as variable names.
 
 ## Step 3: Preserve names in output
 

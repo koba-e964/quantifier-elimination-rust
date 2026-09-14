@@ -189,6 +189,12 @@ impl Parser {
             .ok_or_else(|| self.error(self.end_position(), "expected variable"))?;
         let variable = match token.kind {
             TokenKind::Identifier(name) if self.named => {
+                if matches!(name.as_str(), "exists" | "forall" | "true" | "false") {
+                    return Err(self.error(
+                        token.position,
+                        format!("reserved word '{name}' cannot be used as a variable"),
+                    ));
+                }
                 let variable = self.next_variable;
                 self.next_variable += 1;
                 self.scopes
@@ -264,9 +270,9 @@ impl Parser {
             .ok_or_else(|| self.error(self.end_position(), "expected polynomial term"))?;
         match token.kind {
             TokenKind::Integer(value) => Ok(Polynomial::integer(value)),
-            TokenKind::Identifier(name) if self.named => {
-                Ok(Polynomial::variable(self.resolve_named_variable(name)))
-            }
+            TokenKind::Identifier(name) if self.named => Ok(Polynomial::variable(
+                self.resolve_named_variable(name, token.position)?,
+            )),
             TokenKind::Identifier(name) => Ok(Polynomial::variable(parse_variable(
                 &name,
                 token.position,
@@ -287,23 +293,33 @@ impl Parser {
         }
     }
 
-    fn resolve_named_variable(&mut self, name: String) -> usize {
+    fn resolve_named_variable(
+        &mut self,
+        name: String,
+        position: usize,
+    ) -> Result<usize, ParseError> {
+        if matches!(name.as_str(), "exists" | "forall" | "true" | "false") {
+            return Err(self.error(
+                position,
+                format!("reserved word '{name}' cannot be used as a variable"),
+            ));
+        }
         if let Some(variable) = self
             .scopes
             .iter()
             .rev()
             .find_map(|scope| scope.get(&name).copied())
         {
-            return variable;
+            return Ok(variable);
         }
         if let Some(variable) = self.free_variables.get(&name).copied() {
-            return variable;
+            return Ok(variable);
         }
         let variable = self.next_variable;
         self.next_variable += 1;
         self.free_variables.insert(name.clone(), variable);
         self.names.insert(variable, name);
-        variable
+        Ok(variable)
     }
 
     fn parse_relation(&mut self) -> Result<Relation, ParseError> {
