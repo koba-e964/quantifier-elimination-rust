@@ -187,7 +187,9 @@ fn is_product_binding(atom: &Atom, left: usize, right: usize, alias: usize) -> b
 
 #[cfg(test)]
 mod tests {
-    use super::{SpecialHandlingConfig, SpecialRule};
+    use super::{eliminate_symmetric_pair, SpecialHandlingConfig, SpecialRule};
+    use crate::formula::{Formula, Relation};
+    use crate::polynomial::Polynomial;
 
     #[test]
     fn parses_enabled_symmetric_rule() {
@@ -213,5 +215,27 @@ mod tests {
             SpecialHandlingConfig::parse("[special-rules]\nunknown-rule = true\n").unwrap_err();
 
         assert!(error.contains("unknown special rule"));
+    }
+
+    #[test]
+    fn rejects_non_symmetric_polynomials() {
+        let x0 = Polynomial::variable(0);
+        let x1 = Polynomial::variable(1);
+        let x2 = Polynomial::variable(2);
+        let x3 = Polynomial::variable(3);
+        let x4 = Polynomial::variable(4);
+        let formula = Formula::exists(
+            0,
+            Formula::exists(
+                1,
+                Formula::And(vec![
+                    Formula::atom(x2.clone() - x0.clone() - x1.clone(), Relation::Equal),
+                    Formula::atom(x3 - x0.clone() * x1.clone(), Relation::Equal),
+                    Formula::atom(x4 - x0.clone() * x0 - x1, Relation::Equal),
+                ]),
+            ),
+        );
+
+        assert!(eliminate_symmetric_pair(&formula).is_none());
     }
 }

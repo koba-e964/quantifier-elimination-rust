@@ -77,7 +77,7 @@ the sum/product/square relationship.
   formula.
 - [x] Compare results semantically, not by formula string: use exact CAD cell
   evaluation or an equivalent exact oracle.
-- [ ] Add positive, negative, renamed-variable, reordered-conjunction, and
+- [x] Add positive, negative, renamed-variable, reordered-conjunction, and
   non-matching regression cases.
 - [ ] Record whether the verifier is a test-only oracle or an optional runtime
   safety check.
@@ -107,3 +107,4 @@ the sum/product/square relationship.
 - [x] Record implementation commit `e3809e0` for the dedicated special-rule module.
 - [x] Record implementation commit `cd44a60` for configuration loading and CLI integration.
 - [x] Record implementation commit `321101a` for special-rule CAD equivalence coverage.
+- [x] Record implementation commit `ae4d3c7` for special-rule matching-safety coverage.

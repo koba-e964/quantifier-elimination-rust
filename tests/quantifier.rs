@@ -194,7 +194,7 @@ fn special_vieta_rule_matches_general_cad() {
             1,
             Formula::And(vec![
                 Formula::atom(x2.clone() - x0.clone() - x1.clone(), Relation::Equal),
-                Formula::atom(x3 - x0 * x1, Relation::Equal),
+                Formula::atom(x3 - x0.clone() * x1.clone(), Relation::Equal),
             ]),
         ),
     );
@@ -213,6 +213,37 @@ fn special_vieta_rule_matches_general_cad() {
     .0;
 
     assert_eq!(with_special_handling, without_special_handling);
+}
+
+#[test]
+fn special_vieta_rule_accepts_renamed_witnesses_and_reordered_bindings() {
+    let left = Polynomial::variable(4);
+    let right = Polynomial::variable(7);
+    let sum = Polynomial::variable(9);
+    let product = Polynomial::variable(11);
+    let formula = Formula::exists(
+        4,
+        Formula::exists(
+            7,
+            Formula::And(vec![
+                Formula::atom(
+                    product.clone() - left.clone() * right.clone(),
+                    Relation::Equal,
+                ),
+                Formula::atom(sum.clone() - left - right, Relation::Equal),
+            ]),
+        ),
+    );
+
+    let eliminated = eliminate(&formula).unwrap();
+
+    assert_eq!(
+        eliminated,
+        Formula::atom(
+            sum.clone() * sum - Polynomial::integer(4) * product,
+            Relation::GreaterOrEqual
+        )
+    );
 }
 
 #[test]
