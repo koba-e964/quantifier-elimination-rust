@@ -7,7 +7,8 @@ use quantifier_elimination::qe::evaluate::{
 use quantifier_elimination::qe::normalize::to_nnf;
 use quantifier_elimination::qe::simplify::simplify;
 use quantifier_elimination::{
-    Formula, Polynomial, QuantifierEvaluationError, Relation, RenameError,
+    eliminate_with_options, EliminationOptions, Formula, Polynomial, QuantifierEvaluationError,
+    Relation, RenameError,
 };
 use std::collections::BTreeMap;
 
@@ -179,6 +180,39 @@ fn recursively_eliminates_vieta_sum_and_product_constraints() {
         values.insert(3, BigRational::from_integer(product.into()));
         assert_eq!(eliminated.evaluate(&values), Some(expected));
     }
+}
+
+#[test]
+fn special_vieta_rule_matches_general_cad() {
+    let x0 = Polynomial::variable(0);
+    let x1 = Polynomial::variable(1);
+    let x2 = Polynomial::variable(2);
+    let x3 = Polynomial::variable(3);
+    let formula = Formula::exists(
+        0,
+        Formula::exists(
+            1,
+            Formula::And(vec![
+                Formula::atom(x2.clone() - x0.clone() - x1.clone(), Relation::Equal),
+                Formula::atom(x3 - x0 * x1, Relation::Equal),
+            ]),
+        ),
+    );
+
+    let with_special_handling = eliminate_with_options(&formula, EliminationOptions::default())
+        .unwrap()
+        .0;
+    let without_special_handling = eliminate_with_options(
+        &formula,
+        EliminationOptions {
+            special_handling: false,
+            ..EliminationOptions::default()
+        },
+    )
+    .unwrap()
+    .0;
+
+    assert_eq!(with_special_handling, without_special_handling);
 }
 
 #[test]

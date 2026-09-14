@@ -73,9 +73,9 @@ the sum/product/square relationship.
 
 ## Step 4: Verify special rules against CAD
 
-- [ ] Run each special rule with handling enabled and disabled on the same
+- [x] Run each special rule with handling enabled and disabled on the same
   formula.
-- [ ] Compare results semantically, not by formula string: use exact CAD cell
+- [x] Compare results semantically, not by formula string: use exact CAD cell
   evaluation or an equivalent exact oracle.
 - [ ] Add positive, negative, renamed-variable, reordered-conjunction, and
   non-matching regression cases.
@@ -106,3 +106,4 @@ the sum/product/square relationship.
 - [x] Record implementation commit `239eef7` for alternate-order semantic verification.
 - [x] Record implementation commit `e3809e0` for the dedicated special-rule module.
 - [x] Record implementation commit `cd44a60` for configuration loading and CLI integration.
+- [x] Record implementation commit `321101a` for special-rule CAD equivalence coverage.
