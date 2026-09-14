@@ -59,6 +59,11 @@ the sum/product/square relationship.
   file if the rule language remains unambiguous and type-safe; otherwise keep
   the matcher implementation-driven and expose only configuration for enabling
   and ordering rules.
+- [ ] Move special-rule implementations behind a dedicated module or directory
+  boundary; evaluate a separate crate only if the dependency and API boundary
+  remains clean.
+- [ ] Load the typed rule declarations from a user-provided configuration file
+  and expose the file path through the CLI.
 - [ ] Prefer configuration that declares symmetric witness groups and their
   sum/product bindings; keep the mathematically sensitive symmetric-polynomial
   reduction engine typed and implementation-backed rather than accepting
