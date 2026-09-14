@@ -43,13 +43,15 @@ The CLI can report CAD statistics and control the special-rule path:
 qe --stats 'exists x1. x1^2 + x0 + x2 = 0'
 qe --special-handling=false 'exists x0. exists x1. x2=x0+x1&&x3=x0*x1'
 qe --stats --variable-order=x2,x0 'exists x1. x1^2 + x0 + x2 = 0'
+qe --stats --variable-order=st,y 'exists x. x^2 + st + y = 0'
 ```
 
 `--variable-order` overrides the default deterministic order for reproducible
 experiments. List the free variables only; quantified variables are appended
 automatically. The example above reports `x2 -> x0 -> x1` in its lifting
 order. The list must be exhaustive and must not contain bound variables;
-invalid orders are rejected.
+invalid orders are rejected. Variable names in the order must match the names
+used in the formula; quantified variables are not eligible for the order.
 
 Special handling is enabled by default. The current typed special-rule
 configuration supports the symmetric sum/product rule for existential witness
@@ -73,7 +75,8 @@ product, and adds the exact real-root condition `sum^2 - 4*product >= 0`.
 Unknown rule names are rejected rather than interpreted as arbitrary rewrite
 code.
 
-The initial grammar uses variables such as `x0`, integer constants, `+`, `-`,
+The grammar accepts variables such as `x0` as well as ergonomic names such as
+`x`, `y`, `st`, and `tmp`. It also accepts integer constants, `+`, `-`,
 `*`, `^`, parentheses, comparison operators (`=`, `!=`, `<`, `<=`, `>`,
 `>=`), Boolean operators (`!`, `&&`, `||`), and quantifiers written as
 `exists x0. FORMULA` or `forall x0. FORMULA`.
@@ -82,8 +85,10 @@ The complete grammar and precedence rules are documented in
 [`syntax.md`](syntax.md).
 
 The CLI currently reports quantifier-free results as `true`, `false`, or a
-formula using the same comparison and Boolean syntax. Floating-point literals,
-implicit multiplication, and named variables are not supported yet.
+formula using the same comparison and Boolean syntax, preserving parsed
+variable names. Identifiers may contain letters, digits, and underscores, but
+may not be the reserved words `exists`, `forall`, `true`, or `false`.
+Floating-point literals and implicit multiplication are not supported.
 
 ## Current scope
 

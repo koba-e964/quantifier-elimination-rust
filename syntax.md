@@ -54,6 +54,13 @@ and is ignored. `<digit>` denotes an ASCII decimal digit.
 <exponent> ::= <digits>
 
 <variable> ::= "x" <digits>
+              | <identifier>
+
+<identifier> ::= <identifier-start> <identifier-continue>*
+
+<identifier-start> ::= <letter> | "_"
+
+<identifier-continue> ::= <letter> | <digit> | "_"
 
 <integer> ::= <digits>
 
@@ -87,9 +94,13 @@ Examples:
 exists x0. x0^2 + 1 = 0
 forall x0. (x0 >= 0) || !(x0 < 0)
 exists x0. exists x1. x2 = x0 + x1 && x3 = x0 * x1
+exists x. x^2 + st + y = 0
 ```
 
-Variables must be named `x` followed by a non-negative decimal index, such as
-`x0`, `x1`, or `x42`. Integer literals are decimal and non-negative; negative
-constants use unary `-`, for example `-3`. Floating-point literals, implicit
-multiplication, and named variables such as `y` are not supported.
+Variables may use the compatibility form `x` followed by a non-negative
+decimal index, such as `x0`, `x1`, or `x42`, or ergonomic identifiers such as
+`x`, `y`, `st`, and `tmp`. Identifiers may contain letters, digits, and
+underscores and must not be `exists`, `forall`, `true`, or `false`. Integer
+literals are decimal and non-negative; negative constants use unary `-`, for
+example `-3`. Floating-point literals and implicit multiplication are not
+supported.
