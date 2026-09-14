@@ -42,6 +42,9 @@ The initial grammar uses variables such as `x0`, integer constants, `+`, `-`,
 `>=`), Boolean operators (`!`, `&&`, `||`), and quantifiers written as
 `exists x0. FORMULA` or `forall x0. FORMULA`.
 
+The complete grammar and precedence rules are documented in
+[`syntax.md`](syntax.md).
+
 The CLI currently reports quantifier-free results as `true`, `false`, or a
 formula using the same comparison and Boolean syntax. Floating-point literals,
 implicit multiplication, and named variables are not supported yet.
