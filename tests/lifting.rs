@@ -25,6 +25,22 @@ fn builds_sections_and_sectors_in_order() {
 }
 
 #[test]
+fn separates_touching_intervals_for_distinct_roots() {
+    let cells = decompose_univariate(&[
+        UnivariatePolynomial::from_integers(&[0, 1]),
+        UnivariatePolynomial::from_integers(&[-1, 1]),
+    ]);
+    assert_eq!(cells.len(), 5);
+    assert!(cells[0].sample < cells[1].sample);
+    assert!(
+        BigRational::zero() < cells[2].sample
+            && cells[2].sample < BigRational::from_integer(1.into())
+    );
+    assert!(cells[2].sample < cells[3].sample);
+    assert!(cells[3].sample < cells[4].sample);
+}
+
+#[test]
 fn returns_a_single_sector_without_roots() {
     let cells = decompose_univariate(&[UnivariatePolynomial::from_integers(&[1, 0, 1])]);
     assert_eq!(cells.len(), 1);

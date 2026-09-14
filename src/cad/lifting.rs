@@ -365,27 +365,33 @@ pub fn decompose_algebraic_univariate(
 fn separate_and_deduplicate_roots(roots: &mut Vec<(UnivariatePolynomial, RootInterval)>) {
     let mut index = 0;
     while index + 1 < roots.len() {
-        let overlaps = roots[index].1.upper > roots[index + 1].1.lower
-            && roots[index + 1].1.upper > roots[index].1.lower;
+        let overlaps = roots[index].1.upper >= roots[index + 1].1.lower
+            && roots[index + 1].1.upper >= roots[index].1.lower;
         if !overlaps {
             index += 1;
             continue;
         }
 
-        let intersection = RootInterval::new(
-            roots[index]
-                .1
-                .lower
-                .clone()
-                .max(roots[index + 1].1.lower.clone()),
-            roots[index]
-                .1
-                .upper
-                .clone()
-                .min(roots[index + 1].1.upper.clone()),
-        );
-        let common = roots[index].0.gcd(&roots[index + 1].0);
-        if common.count_roots(&intersection) > 0 {
+        let lower = roots[index]
+            .1
+            .lower
+            .clone()
+            .max(roots[index + 1].1.lower.clone());
+        let upper = roots[index]
+            .1
+            .upper
+            .clone()
+            .min(roots[index + 1].1.upper.clone());
+        if lower < upper {
+            let intersection = RootInterval::new(lower, upper);
+            let common = roots[index].0.gcd(&roots[index + 1].0);
+            if common.count_roots(&intersection) > 0 {
+                roots.remove(index + 1);
+                continue;
+            }
+        } else if roots[index].0.evaluate(&lower).is_zero()
+            && roots[index + 1].0.evaluate(&lower).is_zero()
+        {
             roots.remove(index + 1);
             continue;
         }

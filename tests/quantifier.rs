@@ -149,6 +149,32 @@ fn simplifies_complementary_sign_bounds_to_equality() {
 }
 
 #[test]
+fn recursively_eliminates_vieta_sum_and_product_constraints() {
+    let x0 = Polynomial::variable(0);
+    let x1 = Polynomial::variable(1);
+    let x2 = Polynomial::variable(2);
+    let x3 = Polynomial::variable(3);
+    let formula = Formula::exists(
+        0,
+        Formula::exists(
+            1,
+            Formula::And(vec![
+                Formula::atom(x2.clone() - x0.clone() - x1.clone(), Relation::Equal),
+                Formula::atom(x3 - x0 * x1, Relation::Equal),
+            ]),
+        ),
+    );
+    let eliminated = eliminate(&formula).unwrap();
+
+    for ((sum, product), expected) in [((-3, 1), true), ((0, 1), false)] {
+        let mut values = BTreeMap::new();
+        values.insert(2, BigRational::from_integer(sum.into()));
+        values.insert(3, BigRational::from_integer(product.into()));
+        assert_eq!(eliminated.evaluate(&values), Some(expected));
+    }
+}
+
+#[test]
 fn tracks_free_variables_across_quantifier_scopes() {
     let x = Polynomial::variable(0);
     let y = Polynomial::variable(1);
