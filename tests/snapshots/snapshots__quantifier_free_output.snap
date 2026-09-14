@@ -1,0 +1,8 @@
+---
+source: tests/snapshots.rs
+expression: "run_cli(\"1 = 1 && x > 0\")"
+---
+status: exit status: 0
+stdout:
+x > 0
+stderr:

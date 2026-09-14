@@ -31,6 +31,11 @@ fn snapshots_universal_formula_output() {
 }
 
 #[test]
+fn snapshots_quantifier_free_output() {
+    insta::assert_snapshot!("quantifier_free_output", run_cli("1 = 1 && x > 0"));
+}
+
+#[test]
 fn snapshots_universal_quadratic_strict_inequality_output() {
     insta::assert_snapshot!(
         "universal_quadratic_strict_inequality_output",

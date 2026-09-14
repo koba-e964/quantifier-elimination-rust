@@ -187,10 +187,10 @@ pub fn eliminate_with_options(
     formula: &Formula,
     options: EliminationOptions,
 ) -> Result<(Formula, EliminationStats), QuantifierEvaluationError> {
-    if !matches!(formula, Formula::Quantified { .. }) {
-        return Err(QuantifierEvaluationError::WrongVariable);
-    }
     let mut stats = EliminationStats::default();
+    if formula.is_quantifier_free() {
+        return Ok((simplify(formula), stats));
+    }
     if options.special_handling
         && options
             .special_rules

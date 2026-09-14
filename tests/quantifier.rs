@@ -7,8 +7,7 @@ use quantifier_elimination::qe::evaluate::{
 use quantifier_elimination::qe::normalize::to_nnf;
 use quantifier_elimination::qe::simplify::simplify;
 use quantifier_elimination::{
-    eliminate_with_options, EliminationOptions, Formula, Polynomial, QuantifierEvaluationError,
-    Relation, RenameError,
+    eliminate_with_options, EliminationOptions, Formula, Polynomial, Relation, RenameError,
 };
 use std::collections::BTreeMap;
 
@@ -83,6 +82,19 @@ fn simplifies_boolean_identities_and_flattens_connectives() {
     assert_eq!(
         simplify(&Formula::Or(vec![atom.clone(), atom.clone()])),
         atom
+    );
+}
+
+#[test]
+fn simplifies_quantifier_free_formulas_without_elimination() {
+    let formula = Formula::And(vec![
+        Formula::atom(Polynomial::zero(), Relation::Equal),
+        Formula::atom(Polynomial::variable(0), Relation::Greater),
+    ]);
+
+    assert_eq!(
+        eliminate(&formula).unwrap(),
+        Formula::atom(Polynomial::variable(0), Relation::Greater)
     );
 }
 
@@ -533,10 +545,6 @@ fn eliminates_nonlinear_formulas_with_multiple_free_variables() {
         values.insert(2, BigRational::from_integer(z_value.into()));
         assert_eq!(eliminated.evaluate(&values), Some(expected));
     }
-    assert_eq!(
-        quantifier_elimination::eliminate(&Formula::True),
-        Err(QuantifierEvaluationError::WrongVariable)
-    );
 }
 
 #[test]
