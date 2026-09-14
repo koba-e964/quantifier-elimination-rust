@@ -1,6 +1,6 @@
 # Ergonomic variable names
 
-Current step: Step 4 — make variable-order overrides name-aware.
+Current step: Step 5 — tests, snapshots, and documentation.
 
 ## Step 1: Add a named-parser API
 
@@ -25,13 +25,13 @@ Current step: Step 4 — make variable-order overrides name-aware.
 
 - [x] Resolve `--variable-order=st,p,x,y` through the parsed free-variable names.
 - [x] Preserve compatibility with names such as `x2`.
-- [-] Reject unknown, bound, duplicate, or incomplete names using user-facing names.
+- [x] Reject unknown, bound, duplicate, or incomplete names using user-facing names.
 
 ## Step 5: Tests, snapshots, and documentation
 
-- [ ] Add parser tests for named, quantified, nested, and shadowed variables.
-- [ ] Add CLI tests for named output and named elimination orders.
-- [ ] Add snapshots while preserving existing `x0`, `x1`, ... snapshots.
+- [x] Add parser tests for named, quantified, nested, and shadowed variables.
+- [x] Add CLI tests for named output and named elimination orders.
+- [-] Add snapshots while preserving existing `x0`, `x1`, ... snapshots.
 - [ ] Document named variables in `README.md` and `syntax.md`.
 - [ ] Run formatting, tests, Clippy, and pre-commit for each implementation slice.
 

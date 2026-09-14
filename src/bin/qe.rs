@@ -68,7 +68,9 @@ fn main() {
             std::process::exit(2);
         }
     };
-    if let Err(error) = validate_variable_order(variable_order.as_ref(), &parsed.formula) {
+    if let Err(error) =
+        validate_variable_order(variable_order.as_ref(), &parsed.formula, &parsed.names)
+    {
         eprintln!("qe: {error}");
         std::process::exit(2);
     }
@@ -164,7 +166,11 @@ fn resolve_variable_order(
     Ok(Some(resolved))
 }
 
-fn validate_variable_order(order: Option<&Vec<usize>>, formula: &Formula) -> Result<(), String> {
+fn validate_variable_order(
+    order: Option<&Vec<usize>>,
+    formula: &Formula,
+    names: &VariableNames,
+) -> Result<(), String> {
     let Some(order) = order else {
         return Ok(());
     };
@@ -174,16 +180,36 @@ fn validate_variable_order(order: Option<&Vec<usize>>, formula: &Formula) -> Res
         .copied()
         .collect::<std::collections::BTreeSet<_>>();
     if order.len() != free_variables.len() {
+        let expected = free_variables
+            .iter()
+            .map(|variable| names.name(*variable))
+            .collect::<Vec<_>>()
+            .join(", ");
         return Err(format!(
-            "--variable-order must list every free variable exactly once; expected {}, got {}",
-            free_variables.len(),
+            "--variable-order must list every free variable exactly once; expected {{{expected}}}, got {} entries",
             order.len()
+        ));
+    }
+    if actual.len() != order.len() {
+        let duplicate = order
+            .iter()
+            .find(|variable| {
+                order
+                    .iter()
+                    .filter(|candidate| candidate == variable)
+                    .count()
+                    > 1
+            })
+            .expect("duplicate order entry exists");
+        return Err(format!(
+            "--variable-order contains duplicate variable: {}",
+            names.name(*duplicate)
         ));
     }
     if actual != free_variables {
         let expected = free_variables
             .iter()
-            .map(|variable| format!("x{variable}"))
+            .map(|variable| names.name(*variable))
             .collect::<Vec<_>>()
             .join(", ");
         return Err(format!(

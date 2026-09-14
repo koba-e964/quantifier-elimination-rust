@@ -204,6 +204,18 @@ fn accepts_named_variable_order() {
 }
 
 #[test]
+fn rejects_duplicate_named_variable_order_entries() {
+    let output = Command::new(env!("CARGO_BIN_EXE_qe"))
+        .args(["--variable-order=st,st", "exists x. x^2 + st + y = 0"])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&output.stderr)
+        .contains("--variable-order contains duplicate variable: st"));
+}
+
+#[test]
 fn rejects_an_incomplete_variable_order() {
     let output = Command::new(env!("CARGO_BIN_EXE_qe"))
         .args([
