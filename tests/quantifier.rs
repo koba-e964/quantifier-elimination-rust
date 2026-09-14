@@ -94,6 +94,31 @@ fn simplifies_atoms_up_to_positive_polynomial_scaling() {
 }
 
 #[test]
+fn merges_complete_sign_partitions_in_disjunctions() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let x_signs = [Relation::Less, Relation::Equal, Relation::Greater];
+    let y_signs = [Relation::Less, Relation::Equal];
+    let mut terms = Vec::new();
+    for x_relation in x_signs {
+        for y_relation in y_signs {
+            terms.push(Formula::And(vec![
+                Formula::atom(x.clone(), x_relation),
+                Formula::atom(y.clone(), y_relation),
+            ]));
+        }
+    }
+
+    assert_eq!(
+        simplify(&Formula::Or(terms)),
+        Formula::Or(vec![
+            Formula::atom(y.clone(), Relation::Less),
+            Formula::atom(y, Relation::Equal),
+        ])
+    );
+}
+
+#[test]
 fn tracks_free_variables_across_quantifier_scopes() {
     let x = Polynomial::variable(0);
     let y = Polynomial::variable(1);
