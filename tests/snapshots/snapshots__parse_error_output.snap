@@ -1,0 +1,8 @@
+---
+source: tests/snapshots.rs
+expression: "run_cli(\"x0 =\")"
+---
+status: exit status: 2
+stdout:
+stderr:
+qe: parse error at byte 4: expected polynomial term

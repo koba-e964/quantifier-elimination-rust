@@ -1,0 +1,8 @@
+---
+source: tests/snapshots.rs
+expression: "run_cli(\"exists x1. (x0^2 - 2 = 0) && (x1 - x0 = 0)\")"
+---
+status: exit status: 0
+stdout:
+-2 + x0^2 = 0
+stderr:

@@ -1,0 +1,8 @@
+---
+source: tests/snapshots.rs
+expression: "run_cli(\"forall x0. x0^2 + 1 > 0\")"
+---
+status: exit status: 0
+stdout:
+true
+stderr:

@@ -71,3 +71,16 @@ cargo test
 cargo clippy --all-targets --all-features -- -D warnings
 pre-commit run --all-files
 ```
+
+## Snapshot tests
+
+Snapshot tests cover canonical CLI output, including successful elimination
+and parser errors. Run them with:
+
+```text
+cargo test --test snapshots
+```
+
+When `cargo-insta` is installed, `cargo insta test` runs the same workflow and
+`cargo insta review` interactively reviews changed snapshots. Without it,
+regenerate snapshots explicitly with `INSTA_UPDATE=always cargo test --test snapshots`.

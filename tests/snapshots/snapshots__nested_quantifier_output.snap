@@ -1,0 +1,8 @@
+---
+source: tests/snapshots.rs
+expression: "run_cli(\"forall x2. exists x1. x1^2 + x0*x2 = 0\")"
+---
+status: exit status: 0
+stdout:
+!(((x0 < 0) && (4*x0 < 0)) || ((x0 > 0) && (4*x0 > 0)))
+stderr:
