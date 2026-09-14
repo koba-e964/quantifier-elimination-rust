@@ -1,4 +1,22 @@
 use std::process::Command;
+use std::process::{Child, Output, Stdio};
+use std::thread::sleep;
+use std::time::{Duration, Instant};
+
+fn output_with_timeout(mut child: Child, timeout: Duration) -> Option<Output> {
+    let started = Instant::now();
+    loop {
+        if child.try_wait().unwrap().is_some() {
+            return Some(child.wait_with_output().unwrap());
+        }
+        if started.elapsed() >= timeout {
+            child.kill().unwrap();
+            child.wait().unwrap();
+            return None;
+        }
+        sleep(Duration::from_millis(10));
+    }
+}
 
 #[test]
 fn eliminates_formula_from_an_argument() {
@@ -123,6 +141,24 @@ fn special_handling_can_be_disabled_for_a_cad_baseline() {
         "x2^2 - 4*x3 >= 0\n"
     );
     assert!(String::from_utf8_lossy(&output.stderr).contains("cells constructed: "));
+}
+
+#[test]
+fn special_handling_finishes_the_reported_formula_within_threshold() {
+    let child = Command::new(env!("CARGO_BIN_EXE_qe"))
+        .arg("exists x0. exists x1. x2=x0+x1&&x3=x0*x1&&x4=x0^2+x1^2")
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let output = output_with_timeout(child, Duration::from_secs(2))
+        .expect("special handling exceeded the two-second threshold");
+
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "(-x2^2 + 2*x3 + x4 = 0) && (x2^2 - 4*x3 >= 0)\n"
+    );
 }
 
 #[test]

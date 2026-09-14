@@ -1,6 +1,6 @@
 # Stats and non-terminating simple formulas
 
-Current step: Step 5 — establish a reproducible threshold or timeout test.
+Current step: Step 7 — final review and push.
 
 ## Observed issue
 
@@ -85,7 +85,7 @@ the sum/product/square relationship.
 ## Step 5: Define the termination guard
 
 - [x] Add a bounded diagnostic mode or progress counters that distinguish recursive calls, projection levels, and cells constructed.
-- [ ] Establish a reproducible threshold or timeout test for the formula.
+- [x] Establish a reproducible threshold or timeout test for the formula.
 - [x] Preserve exact arithmetic; do not replace the CAD path with approximate sampling.
 
 ## Step 6: Regression coverage
@@ -109,3 +109,4 @@ the sum/product/square relationship.
 - [x] Record implementation commit `321101a` for special-rule CAD equivalence coverage.
 - [x] Record implementation commit `ae4d3c7` for special-rule matching-safety coverage.
 - [x] Record implementation commit `e720492` for config and baseline CLI coverage.
+- [x] Record implementation commit `50b3f35` for the portable runtime threshold test.
