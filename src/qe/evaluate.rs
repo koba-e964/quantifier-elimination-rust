@@ -813,12 +813,12 @@ fn eliminate_one_variable_with_stats(
             Quantifier::Forall => row.iter().all(|value| *value),
         })
         .collect::<Vec<_>>();
-    Ok(synthesize_cell_conditions(
+    Ok(simplify(&synthesize_cell_conditions(
         &lifting.base_cells,
         &lifting.base_polynomials,
         &base_truth,
         free_variable,
-    ))
+    )))
 }
 
 fn collect_polynomials(

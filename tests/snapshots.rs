@@ -31,6 +31,14 @@ fn snapshots_universal_formula_output() {
 }
 
 #[test]
+fn snapshots_universal_quadratic_strict_inequality_output() {
+    insta::assert_snapshot!(
+        "universal_quadratic_strict_inequality_output",
+        run_cli("forall x. x^2 + y > 0")
+    );
+}
+
+#[test]
 fn snapshots_irrational_section_output() {
     insta::assert_snapshot!(
         "irrational_section_output",

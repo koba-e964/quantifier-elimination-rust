@@ -471,6 +471,22 @@ fn eliminates_existential_quadratic_strict_inequality_with_unbounded_witnesses()
 }
 
 #[test]
+fn simplifies_universal_quadratic_strict_inequality() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    // x^2 + y > 0 for every x exactly when y > 0.
+    let formula = Formula::forall(
+        0,
+        Formula::atom(x.clone() * x + y.clone(), Relation::Greater),
+    );
+
+    assert_eq!(
+        eliminate(&formula).unwrap(),
+        Formula::atom(y, Relation::Greater)
+    );
+}
+
+#[test]
 fn eliminates_quadratic_lifting_over_an_irrational_base_section() {
     let x = Polynomial::variable(0);
     let y = Polynomial::variable(1);
