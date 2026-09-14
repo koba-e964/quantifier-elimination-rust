@@ -86,6 +86,14 @@ fn simplifies_boolean_identities_and_flattens_connectives() {
 }
 
 #[test]
+fn simplifies_atoms_up_to_positive_polynomial_scaling() {
+    let scaled = Polynomial::integer(4) * Polynomial::variable(0);
+    let canonical = Formula::atom(Polynomial::variable(0), Relation::Less);
+
+    assert_eq!(simplify(&Formula::atom(scaled, Relation::Less)), canonical);
+}
+
+#[test]
 fn tracks_free_variables_across_quantifier_scopes() {
     let x = Polynomial::variable(0);
     let y = Polynomial::variable(1);

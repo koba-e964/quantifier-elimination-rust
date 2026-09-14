@@ -1,4 +1,5 @@
 use num_bigint::BigInt;
+use num_integer::Integer;
 use num_rational::BigRational;
 use num_traits::{One, Signed, Zero};
 use std::collections::BTreeMap;
@@ -137,6 +138,47 @@ impl Polynomial {
 
     pub fn is_zero(&self) -> bool {
         self.terms.is_empty()
+    }
+
+    /// Normalize coefficients by a positive rational factor.
+    ///
+    /// The result has primitive integer coefficients and preserves the sign
+    /// of the polynomial, so it can replace an atom without changing its
+    /// relation.
+    pub fn primitive_part(&self) -> Self {
+        if self.is_zero() {
+            return Self::zero();
+        }
+
+        let denominator_lcm = self
+            .terms
+            .values()
+            .map(BigRational::denom)
+            .fold(BigInt::one(), |lcm, denominator| lcm.lcm(denominator));
+        let integer_coefficients = self
+            .terms
+            .iter()
+            .map(|(monomial, coefficient)| {
+                (
+                    monomial.clone(),
+                    coefficient.numer() * (&denominator_lcm / coefficient.denom()),
+                )
+            })
+            .collect::<Vec<_>>();
+        let content = integer_coefficients
+            .iter()
+            .map(|(_, coefficient)| coefficient.abs())
+            .filter(|coefficient| !coefficient.is_zero())
+            .fold(BigInt::zero(), |gcd, coefficient| gcd.gcd(&coefficient));
+
+        Self {
+            terms: integer_coefficients
+                .into_iter()
+                .map(|(monomial, coefficient)| {
+                    (monomial, BigRational::from_integer(coefficient / &content))
+                })
+                .collect(),
+        }
     }
 
     pub fn variables(&self) -> impl Iterator<Item = Variable> {

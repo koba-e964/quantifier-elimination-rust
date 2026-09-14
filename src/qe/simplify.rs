@@ -6,8 +6,12 @@ use std::collections::BTreeMap;
 pub fn simplify(formula: &Formula) -> Formula {
     match formula {
         Formula::True | Formula::False => formula.clone(),
-        Formula::Atom(atom) if atom.polynomial.variables().next().is_none() => {
-            let value = atom.polynomial.evaluate(&BTreeMap::new());
+        Formula::Atom(atom) => {
+            let polynomial = atom.polynomial.primitive_part();
+            if polynomial.variables().next().is_some() {
+                return Formula::atom(polynomial, atom.relation);
+            }
+            let value = polynomial.evaluate(&BTreeMap::new());
             let zero = num_rational::BigRational::zero();
             let result = match atom.relation {
                 Relation::Equal => value == zero,
@@ -23,7 +27,6 @@ pub fn simplify(formula: &Formula) -> Formula {
                 Formula::False
             }
         }
-        Formula::Atom(_) => formula.clone(),
         Formula::Not(body) => match simplify(body) {
             Formula::True => Formula::False,
             Formula::False => Formula::True,
