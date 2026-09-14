@@ -177,6 +177,36 @@ fn reports_an_explicit_variable_order() {
 }
 
 #[test]
+fn rejects_an_incomplete_variable_order() {
+    let output = Command::new(env!("CARGO_BIN_EXE_qe"))
+        .args([
+            "--variable-order=x2,x3",
+            "exists x1. x1^2 + x0 + x2 + x3 = 0",
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&output.stderr)
+        .contains("--variable-order must list every free variable exactly once"));
+}
+
+#[test]
+fn rejects_a_bound_variable_in_the_order() {
+    let output = Command::new(env!("CARGO_BIN_EXE_qe"))
+        .args([
+            "--variable-order=x1,x2,x3",
+            "exists x1. x1^2 + x0 + x2 + x3 = 0",
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&output.stderr)
+        .contains("--variable-order must contain exactly the free variables"));
+}
+
+#[test]
 fn preserves_the_result_across_variable_orders() {
     let outputs = ["x0,x2", "x2,x0"].map(|order| {
         let variable_order = format!("--variable-order={order}");

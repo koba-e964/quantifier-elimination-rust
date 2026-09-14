@@ -48,7 +48,8 @@ qe --stats --variable-order=x2,x0 'exists x1. x1^2 + x0 + x2 = 0'
 `--variable-order` overrides the default deterministic order for reproducible
 experiments. List the free variables only; quantified variables are appended
 automatically. The example above reports `x2 -> x0 -> x1` in its lifting
-order.
+order. The list must be exhaustive and must not contain bound variables;
+invalid orders are rejected.
 
 Special handling is enabled by default. The current typed special-rule
 configuration supports the symmetric sum/product rule for existential witness

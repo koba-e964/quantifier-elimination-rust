@@ -61,6 +61,10 @@ fn main() {
             std::process::exit(2);
         }
     };
+    if let Err(error) = validate_variable_order(variable_order.as_ref(), &formula) {
+        eprintln!("qe: {error}");
+        std::process::exit(2);
+    }
     match eliminate_with_options(
         &formula,
         EliminationOptions {
@@ -117,6 +121,35 @@ fn parse_variable_order(arguments: &[String]) -> Result<Option<Vec<usize>>, Stri
         })
         .collect::<Result<Vec<_>, _>>()
         .map(Some)
+}
+
+fn validate_variable_order(order: Option<&Vec<usize>>, formula: &Formula) -> Result<(), String> {
+    let Some(order) = order else {
+        return Ok(());
+    };
+    let free_variables = formula.free_variables();
+    let actual = order
+        .iter()
+        .copied()
+        .collect::<std::collections::BTreeSet<_>>();
+    if order.len() != free_variables.len() {
+        return Err(format!(
+            "--variable-order must list every free variable exactly once; expected {}, got {}",
+            free_variables.len(),
+            order.len()
+        ));
+    }
+    if actual != free_variables {
+        let expected = free_variables
+            .iter()
+            .map(|variable| format!("x{variable}"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        return Err(format!(
+            "--variable-order must contain exactly the free variables: {{{expected}}}"
+        ));
+    }
+    Ok(())
 }
 
 fn format_stats(stats: &EliminationStats) -> String {
