@@ -136,6 +136,19 @@ fn merges_adjacent_sign_relations() {
 }
 
 #[test]
+fn simplifies_complementary_sign_bounds_to_equality() {
+    let polynomial = Polynomial::variable(0);
+
+    assert_eq!(
+        simplify(&Formula::Not(Box::new(Formula::Or(vec![
+            Formula::atom(polynomial.clone(), Relation::Less),
+            Formula::atom(polynomial.clone(), Relation::Greater),
+        ])))),
+        Formula::atom(polynomial, Relation::Equal)
+    );
+}
+
+#[test]
 fn tracks_free_variables_across_quantifier_scopes() {
     let x = Polynomial::variable(0);
     let y = Polynomial::variable(1);

@@ -32,6 +32,29 @@ pub fn simplify(formula: &Formula) -> Formula {
             Formula::True => Formula::False,
             Formula::False => Formula::True,
             Formula::Not(inner) => *inner,
+            Formula::Atom(atom) => Formula::atom(
+                atom.polynomial,
+                match atom.relation {
+                    Relation::Equal => Relation::NotEqual,
+                    Relation::NotEqual => Relation::Equal,
+                    Relation::Less => Relation::GreaterOrEqual,
+                    Relation::LessOrEqual => Relation::Greater,
+                    Relation::Greater => Relation::LessOrEqual,
+                    Relation::GreaterOrEqual => Relation::Less,
+                },
+            ),
+            Formula::Or(formulas) => simplify(&Formula::And(
+                formulas
+                    .into_iter()
+                    .map(|formula| Formula::Not(Box::new(formula)))
+                    .collect(),
+            )),
+            Formula::And(formulas) => simplify(&Formula::Or(
+                formulas
+                    .into_iter()
+                    .map(|formula| Formula::Not(Box::new(formula)))
+                    .collect(),
+            )),
             simplified => Formula::Not(Box::new(simplified)),
         },
         Formula::And(formulas) => simplify_conjunction(formulas),
@@ -59,11 +82,57 @@ fn simplify_conjunction(formulas: &[Formula]) -> Formula {
             _ => {}
         }
     }
+    simplified = merge_exact_sign_bounds(simplified);
     match simplified.len() {
         0 => Formula::True,
         1 => simplified.pop().unwrap(),
         _ => Formula::And(simplified),
     }
+}
+
+fn merge_exact_sign_bounds(mut formulas: Vec<Formula>) -> Vec<Formula> {
+    let mut index = 0;
+    while index < formulas.len() {
+        let Some((polynomial, relation)) = formulas.get(index).and_then(|formula| match formula {
+            Formula::Atom(atom)
+                if matches!(
+                    atom.relation,
+                    Relation::LessOrEqual | Relation::GreaterOrEqual
+                ) =>
+            {
+                Some((atom.polynomial.clone(), atom.relation))
+            }
+            _ => None,
+        }) else {
+            index += 1;
+            continue;
+        };
+        let opposite = match relation {
+            Relation::LessOrEqual => Relation::GreaterOrEqual,
+            Relation::GreaterOrEqual => Relation::LessOrEqual,
+            _ => unreachable!(),
+        };
+        let Some(opposite_index) = formulas.iter().position(|formula| {
+            matches!(
+                formula,
+                Formula::Atom(atom)
+                    if atom.polynomial == polynomial && atom.relation == opposite
+            )
+        }) else {
+            index += 1;
+            continue;
+        };
+        if opposite_index == index {
+            index += 1;
+            continue;
+        }
+        let first = index.min(opposite_index);
+        let second = index.max(opposite_index);
+        formulas.remove(second);
+        formulas[first] = Formula::atom(polynomial, Relation::Equal);
+        index = 0;
+    }
+    formulas
 }
 
 fn simplify_disjunction(formulas: &[Formula]) -> Formula {
