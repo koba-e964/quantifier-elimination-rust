@@ -118,3 +118,19 @@ fn snapshots_vieta_special_handling_output() {
         ])
     );
 }
+
+#[test]
+fn snapshots_cubic_symmetric_output() {
+    insta::assert_snapshot!(
+        "cubic_symmetric_output",
+        run_cli("exists x. exists y. x^3 + y^3 = 3*x*y && k = x+y")
+    );
+}
+
+#[test]
+fn snapshots_implicit_product_output() {
+    insta::assert_snapshot!(
+        "implicit_product_output",
+        run_cli("exists x. exists y. x+y=k && x^2+x*y+y^2=1")
+    );
+}

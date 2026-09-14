@@ -5,10 +5,10 @@ use crate::cad::lifting::{
 };
 use crate::cad::lifting::{lift_recursive, lift_two_variables};
 use crate::cad::projection::ProjectionError;
-use crate::formula::{Atom, Formula, Quantifier};
+use crate::formula::{Atom, Formula, Quantifier, Relation};
 use crate::polynomial::Monomial;
 use crate::qe::simplify::simplify;
-use crate::qe::special::eliminate_symmetric_pair;
+use crate::qe::special::rewrite_symmetric_pair;
 pub use crate::qe::special::{SpecialHandlingConfig, SpecialRule};
 use num_traits::Signed;
 
@@ -197,7 +197,12 @@ pub fn eliminate_with_options(
             .enabled_rules
             .contains(&SpecialRule::SymmetricSumProduct)
     {
-        if let Some(result) = eliminate_symmetric_pair(formula) {
+        if let Some(result) = rewrite_symmetric_pair(formula) {
+            let result = if result.is_quantifier_free() {
+                result
+            } else {
+                eliminate_recursive(&result, &mut stats, options.clone())?
+            };
             return Ok((result, stats));
         }
     }
@@ -235,6 +240,11 @@ fn eliminate_recursive(
     if let Some(eliminated) = eliminate_forall_linear_conjunction(&reduced, *variable) {
         return Ok(eliminated);
     }
+    if let Some(eliminated) =
+        eliminate_exists_linear_equality_with_variable_coefficient(&reduced, *variable)
+    {
+        return Ok(simplify(&eliminated));
+    }
     if let Some(eliminated) = eliminate_exists_linear_conjunction(&reduced, *variable) {
         return Ok(simplify(&eliminated));
     }
@@ -270,14 +280,9 @@ fn eliminate_recursive(
     } else {
         let mut variable_order = options
             .variable_order
-            .clone()
-            .filter(|order| {
-                order.len() == free_variables.len()
-                    && order
-                        .iter()
-                        .copied()
-                        .collect::<std::collections::BTreeSet<_>>()
-                        == free_variables
+            .as_ref()
+            .map(|order| {
+                select_variable_order_with_precedence(&reduced, &free_variables, *variable, order)
             })
             .unwrap_or_else(|| select_variable_order(&reduced, &free_variables, *variable));
         variable_order.push(*variable);
@@ -307,6 +312,29 @@ fn select_variable_order(
             *variable,
         )
     });
+    variables
+}
+
+fn select_variable_order_with_precedence(
+    formula: &Formula,
+    free_variables: &std::collections::BTreeSet<usize>,
+    quantified_variable: usize,
+    precedence: &[usize],
+) -> Vec<usize> {
+    let mut variables = precedence
+        .iter()
+        .copied()
+        .filter(|variable| free_variables.contains(variable))
+        .collect::<Vec<_>>();
+    let selected = variables
+        .iter()
+        .copied()
+        .collect::<std::collections::BTreeSet<_>>();
+    variables.extend(
+        select_variable_order(formula, free_variables, quantified_variable)
+            .into_iter()
+            .filter(|variable| !selected.contains(variable)),
+    );
     variables
 }
 
@@ -450,6 +478,94 @@ fn eliminate_exists_linear_conjunction(formula: &Formula, variable: usize) -> Op
         conditions.push(Formula::atom(substituted, relation));
     }
     Some(Formula::And(conditions))
+}
+
+fn eliminate_exists_linear_equality_with_variable_coefficient(
+    formula: &Formula,
+    variable: usize,
+) -> Option<Formula> {
+    let Formula::Quantified {
+        quantifier: Quantifier::Exists,
+        body,
+        ..
+    } = formula
+    else {
+        return None;
+    };
+    let Formula::And(branches) = body.as_ref() else {
+        return None;
+    };
+    let equality_index = branches.iter().position(|branch| {
+        atom_with_negated_relation(branch).is_some_and(|atom| {
+            atom.relation == Relation::Equal && atom.polynomial.degree(variable) == 1
+        })
+    })?;
+    let equality = atom_with_negated_relation(&branches[equality_index])?;
+    let coefficient = equality.polynomial.coefficient_in(variable, 1);
+    if coefficient.variables().next().is_none() || coefficient.is_zero() {
+        return None;
+    }
+    let constant = equality.polynomial.coefficient_in(variable, 0);
+    let mut variable_conditions = Vec::new();
+    let mut constant_conditions = Vec::new();
+    for (index, branch) in branches.iter().enumerate() {
+        if index == equality_index {
+            continue;
+        }
+        let atom = atom_with_negated_relation(branch)?;
+        match atom.polynomial.degree(variable) {
+            0 => constant_conditions.push(Formula::Atom(atom)),
+            1 => {
+                let condition_coefficient = atom.polynomial.coefficient_in(variable, 1);
+                if condition_coefficient.variables().next().is_some()
+                    || condition_coefficient.is_zero()
+                {
+                    return None;
+                }
+                variable_conditions.push((
+                    condition_coefficient,
+                    atom.polynomial.coefficient_in(variable, 0),
+                    atom.relation,
+                ));
+            }
+            _ => return None,
+        }
+    }
+    if variable_conditions.len() > 1 {
+        return None;
+    }
+
+    let substituted = variable_conditions
+        .iter()
+        .map(|(condition_coefficient, condition_constant, relation)| {
+            let numerator = condition_constant.clone() * coefficient.clone()
+                - condition_coefficient.clone() * constant.clone();
+            (numerator, *relation)
+        })
+        .collect::<Vec<_>>();
+    let mut positive_branch = vec![Formula::atom(coefficient.clone(), Relation::Greater)];
+    positive_branch.extend(constant_conditions.iter().cloned());
+    positive_branch.extend(
+        substituted
+            .iter()
+            .map(|(polynomial, relation)| Formula::atom(polynomial.clone(), *relation)),
+    );
+    let mut negative_branch = vec![Formula::atom(coefficient.clone(), Relation::Less)];
+    negative_branch.extend(constant_conditions.iter().cloned());
+    negative_branch.extend(substituted.iter().map(|(polynomial, relation)| {
+        Formula::atom(polynomial.clone(), reverse_inequality(*relation))
+    }));
+    let mut zero_branch = vec![
+        Formula::atom(coefficient, Relation::Equal),
+        Formula::atom(constant, Relation::Equal),
+    ];
+    zero_branch.extend(constant_conditions);
+
+    Some(Formula::Or(vec![
+        Formula::And(positive_branch),
+        Formula::And(negative_branch),
+        Formula::And(zero_branch),
+    ]))
 }
 
 fn eliminate_exists_linear_inequalities(formula: &Formula, variable: usize) -> Option<Formula> {

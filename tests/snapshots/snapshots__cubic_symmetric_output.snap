@@ -1,0 +1,8 @@
+---
+source: tests/snapshots.rs
+expression: "run_cli(\"exists x. exists y. x^3 + y^3 = 3*x*y && k = x+y\")"
+---
+status: exit status: 0
+stdout:
+((-1 - k > 0) && (-3*k^2 + k^3 >= 0)) || ((-1 - k < 0) && (-3*k^2 + k^3 <= 0)) || ((-1 - k = 0) && (k^3 = 0))
+stderr:

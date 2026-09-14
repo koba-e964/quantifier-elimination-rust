@@ -88,7 +88,7 @@ impl SpecialHandlingConfig {
     }
 }
 
-pub(crate) fn eliminate_symmetric_pair(formula: &Formula) -> Option<Formula> {
+pub(crate) fn rewrite_symmetric_pair(formula: &Formula) -> Option<Formula> {
     let Formula::Quantified {
         quantifier: Quantifier::Exists,
         variable: left,
@@ -145,26 +145,54 @@ pub(crate) fn eliminate_symmetric_pair(formula: &Formula) -> Option<Formula> {
     let [sum_alias] = sum_aliases.as_slice() else {
         return None;
     };
-    let [product_alias] = product_aliases.as_slice() else {
+    if product_aliases.len() > 1 {
         return None;
-    };
+    }
+    let product_alias = product_aliases.first().copied();
+    let product_variable = product_alias.unwrap_or_else(|| next_variable(formula));
 
     let mut rewritten = Vec::new();
     for atom in atoms {
         if is_sum_binding(atom, *left, *right, *sum_alias)
-            || is_product_binding(atom, *left, *right, *product_alias)
+            || product_alias.is_some_and(|alias| is_product_binding(atom, *left, *right, alias))
         {
             continue;
         }
         let polynomial =
             atom.polynomial
-                .rewrite_symmetric(*left, *right, *sum_alias, *product_alias)?;
+                .rewrite_symmetric(*left, *right, *sum_alias, product_variable)?;
         rewritten.push(Formula::atom(polynomial, atom.relation));
     }
     let discriminant = Polynomial::variable(*sum_alias).pow(2)
-        - Polynomial::variable(*product_alias) * Polynomial::integer(4);
+        - Polynomial::variable(product_variable) * Polynomial::integer(4);
     rewritten.push(Formula::atom(discriminant, Relation::GreaterOrEqual));
-    Some(simplify(&Formula::And(rewritten)))
+    let result = simplify(&Formula::And(rewritten));
+    Some(if product_alias.is_some() {
+        result
+    } else {
+        Formula::exists(product_variable, result)
+    })
+}
+
+fn next_variable(formula: &Formula) -> usize {
+    all_variables(formula)
+        .into_iter()
+        .max()
+        .map_or(0, |variable| variable + 1)
+}
+
+fn all_variables(formula: &Formula) -> Vec<usize> {
+    match formula {
+        Formula::True | Formula::False => Vec::new(),
+        Formula::Atom(atom) => atom.polynomial.variables().collect(),
+        Formula::Not(body) => all_variables(body),
+        Formula::And(formulas) | Formula::Or(formulas) => {
+            formulas.iter().flat_map(all_variables).collect()
+        }
+        Formula::Quantified { variable, body, .. } => std::iter::once(*variable)
+            .chain(all_variables(body))
+            .collect(),
+    }
 }
 
 fn is_sum_binding(atom: &Atom, left: usize, right: usize, alias: usize) -> bool {
@@ -187,7 +215,7 @@ fn is_product_binding(atom: &Atom, left: usize, right: usize, alias: usize) -> b
 
 #[cfg(test)]
 mod tests {
-    use super::{eliminate_symmetric_pair, SpecialHandlingConfig, SpecialRule};
+    use super::{rewrite_symmetric_pair, SpecialHandlingConfig, SpecialRule};
     use crate::formula::{Formula, Relation};
     use crate::polynomial::Polynomial;
 
@@ -236,6 +264,6 @@ mod tests {
             ),
         );
 
-        assert!(eliminate_symmetric_pair(&formula).is_none());
+        assert!(rewrite_symmetric_pair(&formula).is_none());
     }
 }

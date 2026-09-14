@@ -228,6 +228,36 @@ fn special_vieta_rule_matches_general_cad() {
 }
 
 #[test]
+fn special_vieta_rule_handles_an_implicit_product() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let k = Polynomial::variable(2);
+    let formula = Formula::exists(
+        0,
+        Formula::exists(
+            1,
+            Formula::And(vec![
+                Formula::atom(
+                    x.clone().pow(3) + y.clone().pow(3) - Polynomial::integer(3) * x * y,
+                    Relation::Equal,
+                ),
+                Formula::atom(
+                    k - Polynomial::variable(0) - Polynomial::variable(1),
+                    Relation::Equal,
+                ),
+            ]),
+        ),
+    );
+
+    let eliminated = eliminate(&formula).unwrap();
+    for (value, expected) in [(-2, false), (-1, false), (0, true), (3, true), (4, false)] {
+        let mut values = BTreeMap::new();
+        values.insert(2, BigRational::from_integer(value.into()));
+        assert_eq!(eliminated.evaluate(&values), Some(expected));
+    }
+}
+
+#[test]
 fn special_vieta_rule_accepts_renamed_witnesses_and_reordered_bindings() {
     let left = Polynomial::variable(4);
     let right = Polynomial::variable(7);
