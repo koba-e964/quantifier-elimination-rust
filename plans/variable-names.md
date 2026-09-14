@@ -1,12 +1,12 @@
 # Ergonomic variable names
 
-Current step: Step 1 — define the named-variable parsing boundary.
+Current step: Step 2 — add lexical name resolution.
 
 ## Step 1: Add a named-parser API
 
-- [ ] Add a `ParsedFormula` result containing the numeric formula and display-name mapping.
-- [ ] Add `parse_formula_with_names` while preserving legacy `parse_formula` behavior.
-- [ ] Keep the solver internals numeric; resolve names only at the parser/CLI boundary.
+- [x] Add a `ParsedFormula` result containing the numeric formula and display-name mapping.
+- [x] Add `parse_formula_with_names` while preserving legacy `parse_formula` behavior.
+- [x] Keep the solver internals numeric; resolve names only at the parser/CLI boundary.
 
 ## Step 2: Add lexical name resolution
 

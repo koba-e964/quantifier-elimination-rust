@@ -1,11 +1,18 @@
 use crate::formula::{Formula, Quantifier, Relation};
-use crate::polynomial::Polynomial;
+use crate::polynomial::{Polynomial, VariableNames};
+use std::collections::BTreeMap;
 use std::fmt;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ParseError {
     pub position: usize,
     pub message: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ParsedFormula {
+    pub formula: Formula,
+    pub names: VariableNames,
 }
 
 impl fmt::Display for ParseError {
@@ -23,6 +30,18 @@ pub fn parse_formula(input: &str) -> Result<Formula, ParseError> {
         return Err(parser.error(token.position(), "expected end of input"));
     }
     Ok(formula)
+}
+
+pub fn parse_formula_with_names(input: &str) -> Result<ParsedFormula, ParseError> {
+    let mut parser = Parser::new_named(input)?;
+    let formula = parser.parse_formula()?;
+    if let Some(token) = parser.peek() {
+        return Err(parser.error(token.position(), "expected end of input"));
+    }
+    Ok(ParsedFormula {
+        formula,
+        names: parser.names,
+    })
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -62,13 +81,31 @@ impl Token {
 struct Parser {
     tokens: Vec<Token>,
     index: usize,
+    named: bool,
+    next_variable: usize,
+    free_variables: BTreeMap<String, usize>,
+    scopes: Vec<BTreeMap<String, usize>>,
+    names: VariableNames,
 }
 
 impl Parser {
     fn new(input: &str) -> Result<Self, ParseError> {
+        Self::new_with_mode(input, false)
+    }
+
+    fn new_named(input: &str) -> Result<Self, ParseError> {
+        Self::new_with_mode(input, true)
+    }
+
+    fn new_with_mode(input: &str, named: bool) -> Result<Self, ParseError> {
         Ok(Self {
             tokens: tokenize(input)?,
             index: 0,
+            named,
+            next_variable: 0,
+            free_variables: BTreeMap::new(),
+            scopes: Vec::new(),
+            names: VariableNames::new(),
         })
     }
 
@@ -151,6 +188,14 @@ impl Parser {
             .next()
             .ok_or_else(|| self.error(self.end_position(), "expected variable"))?;
         let variable = match token.kind {
+            TokenKind::Identifier(name) if self.named => {
+                let variable = self.next_variable;
+                self.next_variable += 1;
+                self.scopes
+                    .push([(name.clone(), variable)].into_iter().collect());
+                self.names.insert(variable, name);
+                variable
+            }
             TokenKind::Identifier(name) => parse_variable(&name, token.position, self)?,
             _ => return Err(self.error(token.position, "expected a variable such as x0")),
         };
@@ -159,6 +204,9 @@ impl Parser {
             "expected '.' after quantified variable",
         )?;
         let body = self.parse_formula()?;
+        if self.named {
+            self.scopes.pop();
+        }
         Ok(match quantifier {
             Quantifier::Exists => Formula::exists(variable, body),
             Quantifier::Forall => Formula::forall(variable, body),
@@ -216,6 +264,9 @@ impl Parser {
             .ok_or_else(|| self.error(self.end_position(), "expected polynomial term"))?;
         match token.kind {
             TokenKind::Integer(value) => Ok(Polynomial::integer(value)),
+            TokenKind::Identifier(name) if self.named => {
+                Ok(Polynomial::variable(self.resolve_named_variable(name)))
+            }
             TokenKind::Identifier(name) => Ok(Polynomial::variable(parse_variable(
                 &name,
                 token.position,
@@ -234,6 +285,25 @@ impl Parser {
                 "expected integer, variable, or parenthesized polynomial",
             )),
         }
+    }
+
+    fn resolve_named_variable(&mut self, name: String) -> usize {
+        if let Some(variable) = self
+            .scopes
+            .iter()
+            .rev()
+            .find_map(|scope| scope.get(&name).copied())
+        {
+            return variable;
+        }
+        if let Some(variable) = self.free_variables.get(&name).copied() {
+            return variable;
+        }
+        let variable = self.next_variable;
+        self.next_variable += 1;
+        self.free_variables.insert(name.clone(), variable);
+        self.names.insert(variable, name);
+        variable
     }
 
     fn parse_relation(&mut self) -> Result<Relation, ParseError> {

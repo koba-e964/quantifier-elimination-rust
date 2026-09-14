@@ -18,7 +18,7 @@ pub use algebra::coefficient::{
 };
 pub use algebra::univariate::{RootInterval, UnivariatePolynomial};
 pub use formula::{Atom, Formula, Quantifier, Relation, RenameError};
-pub use parser::{parse_formula, ParseError};
+pub use parser::{parse_formula, parse_formula_with_names, ParseError, ParsedFormula};
 pub use polynomial::{Monomial, Polynomial, PolynomialEvaluationError, Variable, VariableNames};
 pub use qe::evaluate::{
     eliminate, eliminate_with_options, eliminate_with_stats, EliminationOptions, EliminationStats,
