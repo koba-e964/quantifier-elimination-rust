@@ -1,5 +1,6 @@
 use quantifier_elimination::{
     eliminate_with_options, parse_formula, EliminationOptions, EliminationStats, Formula, Relation,
+    SpecialHandlingConfig,
 };
 use std::io::Read;
 
@@ -56,6 +57,7 @@ fn main() {
         &formula,
         EliminationOptions {
             special_handling,
+            special_rules: SpecialHandlingConfig::default(),
             variable_order,
         },
     ) {

@@ -1,6 +1,6 @@
 # Stats and non-terminating simple formulas
 
-Current step: Step 3 — design a typed, configuration-backed special-rule declaration.
+Current step: Step 3 — load typed special-rule declarations from a configuration file.
 
 ## Observed issue
 
@@ -59,7 +59,7 @@ the sum/product/square relationship.
   file if the rule language remains unambiguous and type-safe; otherwise keep
   the matcher implementation-driven and expose only configuration for enabling
   and ordering rules.
-- [ ] Move special-rule implementations behind a dedicated module or directory
+- [x] Move special-rule implementations behind a dedicated module or directory
   boundary; evaluate a separate crate only if the dependency and API boundary
   remains clean.
 - [ ] Load the typed rule declarations from a user-provided configuration file
@@ -104,3 +104,4 @@ the sum/product/square relationship.
 - [x] Record implementation commit `4a99f43` for elimination-order reporting and override support.
 - [x] Record implementation commit `6f906d9` for deterministic default order selection.
 - [x] Record implementation commit `239eef7` for alternate-order semantic verification.
+- [x] Record implementation commit `e3809e0` for the dedicated special-rule module.

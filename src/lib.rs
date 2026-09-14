@@ -22,5 +22,5 @@ pub use parser::{parse_formula, ParseError};
 pub use polynomial::{Monomial, Polynomial, PolynomialEvaluationError, Variable, VariableNames};
 pub use qe::evaluate::{
     eliminate, eliminate_with_options, eliminate_with_stats, EliminationOptions, EliminationStats,
-    QuantifierEvaluationError,
+    QuantifierEvaluationError, SpecialHandlingConfig, SpecialRule,
 };
