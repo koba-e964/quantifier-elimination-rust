@@ -1,6 +1,6 @@
 # Snapshot Tests
 
-Current step: Step 4 — review and validation workflow.
+Current step: Step 5 — finalize.
 
 ## Step 1: Move the implementation plan
 
@@ -24,12 +24,12 @@ Current step: Step 4 — review and validation workflow.
 
 ## Step 4: Review and validation workflow
 
-- [ ] Verify `cargo test` fails on intentional snapshot changes.
+- [x] Verify `cargo test` fails on intentional snapshot changes using `INSTA_UPDATE=no`.
 - [x] Document `cargo insta test` and `cargo insta review`.
 - [x] Run formatting, tests, Clippy, and pre-commit.
-- [ ] Show the literal diff and commit each logical implementation slice.
+- [x] Show the literal diff and commit each logical implementation slice as `cb7d698`.
 
 ## Step 5: Finalize
 
-- [ ] Review snapshot readability and remove unstable assertions.
+- [x] Review snapshot readability and remove unstable assertions.
 - [ ] Push only after all snapshot work and validation are complete.
