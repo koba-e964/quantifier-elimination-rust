@@ -70,3 +70,21 @@ fn prints_cad_stats_when_requested() {
     assert!(stderr.contains("leaf cells: "));
     assert!(stderr.contains("projection polynomials: "));
 }
+
+#[test]
+fn applies_symmetric_special_handling_before_cad() {
+    let output = Command::new(env!("CARGO_BIN_EXE_qe"))
+        .args([
+            "--stats",
+            "exists x0. exists x1. x2=x0+x1&&x3=x0*x1&&x4=x0^2+x1^2",
+        ])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "(-x2^2 + 2*x3 + x4 = 0) && (x2^2 - 4*x3 >= 0)\n"
+    );
+    assert!(String::from_utf8_lossy(&output.stderr).contains("cells constructed: 0"));
+}

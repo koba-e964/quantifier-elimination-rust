@@ -251,6 +251,64 @@ impl Polynomial {
         result
     }
 
+    pub fn swap_variables(&self, left: Variable, right: Variable) -> Self {
+        let mut result = Self::zero();
+        for (monomial, coefficient) in &self.terms {
+            let mut powers = monomial.0.clone();
+            let left_power = powers.remove(&left).unwrap_or_default();
+            let right_power = powers.remove(&right).unwrap_or_default();
+            if left_power > 0 {
+                powers.insert(right, left_power);
+            }
+            if right_power > 0 {
+                powers.insert(left, right_power);
+            }
+            let entry = result.terms.entry(Monomial(powers)).or_default();
+            *entry += coefficient.clone();
+        }
+        result.terms.retain(|_, coefficient| !coefficient.is_zero());
+        result
+    }
+
+    pub fn rewrite_symmetric(
+        &self,
+        left: Variable,
+        right: Variable,
+        sum: Variable,
+        product: Variable,
+    ) -> Option<Self> {
+        if self.swap_variables(left, right) != *self {
+            return None;
+        }
+
+        let mut result = Self::zero();
+        for (monomial, coefficient) in &self.terms {
+            let left_power = monomial.exponent(left);
+            let right_power = monomial.exponent(right);
+            if left_power < right_power {
+                continue;
+            }
+
+            let mut other_powers = monomial.0.clone();
+            other_powers.remove(&left);
+            other_powers.remove(&right);
+            let other = Self {
+                terms: [(Monomial(other_powers), coefficient.clone())]
+                    .into_iter()
+                    .collect(),
+            };
+            let term = if left_power == right_power {
+                other * Self::variable(product).pow(left_power)
+            } else {
+                other
+                    * Self::variable(product).pow(right_power)
+                    * power_sum(left_power - right_power, sum, product)
+            };
+            result = result + term;
+        }
+        Some(result)
+    }
+
     pub fn to_string_with(&self, names: &VariableNames) -> String {
         self.format_with(names)
     }
@@ -340,6 +398,24 @@ impl Polynomial {
                     .map_err(PolynomialEvaluationError::Arithmetic)
             },
         )
+    }
+}
+
+fn power_sum(degree: usize, sum: Variable, product: Variable) -> Polynomial {
+    match degree {
+        0 => Polynomial::integer(2),
+        1 => Polynomial::variable(sum),
+        _ => {
+            let mut previous = Polynomial::integer(2);
+            let mut current = Polynomial::variable(sum);
+            for _ in 2..=degree {
+                let next = Polynomial::variable(sum).clone() * current.clone()
+                    - Polynomial::variable(product).clone() * previous;
+                previous = current;
+                current = next;
+            }
+            current
+        }
     }
 }
 

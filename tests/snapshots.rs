@@ -74,3 +74,14 @@ fn snapshots_stats_output() {
         run_cli_args(["--stats", "exists x1. x1^2 + x0 + x2 = 0"])
     );
 }
+
+#[test]
+fn snapshots_vieta_special_handling_output() {
+    insta::assert_snapshot!(
+        "vieta_special_handling_output",
+        run_cli_args([
+            "--stats",
+            "exists x0. exists x1. x2=x0+x1&&x3=x0*x1&&x4=x0^2+x1^2",
+        ])
+    );
+}

@@ -1,0 +1,16 @@
+---
+source: tests/snapshots.rs
+expression: "run_cli_args([\"--stats\",\n\"exists x0. exists x1. x2=x0+x1&&x3=x0*x1&&x4=x0^2+x1^2\",])"
+---
+status: exit status: 0
+stdout:
+(-x2^2 + 2*x3 + x4 = 0) && (x2^2 - 4*x3 >= 0)
+stderr:
+stats:
+  quantifier calls: 0
+  cells constructed: 0
+  leaf cells: 0
+  sector cells: 0
+  section cells: 0
+  projection levels: 0
+  projection polynomials: 0

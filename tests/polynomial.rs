@@ -19,6 +19,32 @@ fn polynomial_arithmetic_is_exact() {
 }
 
 #[test]
+fn rewrites_symmetric_polynomials_in_sum_and_product() {
+    let x0 = Polynomial::variable(0);
+    let x1 = Polynomial::variable(1);
+    let sum = Polynomial::variable(2);
+    let product = Polynomial::variable(3);
+
+    let squares = x0.clone().pow(2) + x1.clone().pow(2);
+    assert_eq!(
+        squares.rewrite_symmetric(0, 1, 2, 3),
+        Some(sum.clone().pow(2) - product.clone() * Polynomial::integer(2))
+    );
+
+    let cubes = x0.pow(3) + x1.pow(3);
+    assert_eq!(
+        cubes.rewrite_symmetric(0, 1, 2, 3),
+        Some(sum.clone().pow(3) - product * sum * Polynomial::integer(3))
+    );
+}
+
+#[test]
+fn rejects_non_symmetric_polynomial_rewrites() {
+    let polynomial = Polynomial::variable(0).pow(2) + Polynomial::variable(1);
+    assert_eq!(polynomial.rewrite_symmetric(0, 1, 2, 3), None);
+}
+
+#[test]
 fn zero_terms_are_removed() {
     let x = Polynomial::variable(0);
     assert!((x.clone() - x).is_zero());

@@ -1,6 +1,6 @@
 # Stats and non-terminating simple formulas
 
-Current step: Step 1 — isolate the expensive elimination path and define the two solution tracks.
+Current step: Step 3 — integrate the validated symmetric reducer into special handling.
 
 ## Observed issue
 
@@ -36,9 +36,11 @@ the sum/product/square relationship.
 
 ## Step 3: Add special handling for simple cases
 
-- [ ] Add `special-handling` as an option with default `true`, plus an explicit
+- [x] Implement and test a generic exact reducer from symmetric polynomials in
+  `x0`, `x1` to sum/product variables.
+- [x] Add `special-handling` as an option with default `true`, plus an explicit
   way to disable it for baseline CAD comparisons.
-- [ ] Detect the Vieta pattern
+- [x] Detect the Vieta pattern
   `exists x0. exists x1. (...)` with
   `s = x0 + x1` and `p = x0*x1` (including equivalent normalized forms), then
   reduce every symmetric polynomial in `x0` and `x1` to a polynomial in `s`
@@ -51,7 +53,7 @@ the sum/product/square relationship.
   `x0`/`x1` variables.
 - [ ] Reject or fall back cleanly for non-symmetric expressions; do not apply a
   partial rewrite to a polynomial that changes under swapping `x0` and `x1`.
-- [ ] Keep special rules guarded: unsupported shapes must fall back to the
+- [x] Keep special rules guarded: unsupported shapes must fall back to the
   general exact elimination path.
 - [ ] Design a rule representation that can be serialized as a configuration
   file if the rule language remains unambiguous and type-safe; otherwise keep
@@ -91,6 +93,6 @@ the sum/product/square relationship.
 
 ## Step 7: Review and commit
 
-- [ ] Show the literal diff for each logical implementation slice.
-- [ ] Wait for approval before committing in commit+review mode.
-- [ ] Record commit hashes and any intentionally unsupported cases here.
+- [x] Show the literal diff for each logical implementation slice.
+- [x] Wait for approval before committing in commit+review mode.
+- [x] Record implementation commit `fdbd05e` and keep elimination-order/configuration work pending.

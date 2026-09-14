@@ -1,5 +1,5 @@
 use quantifier_elimination::{
-    eliminate_with_stats, parse_formula, EliminationStats, Formula, Relation,
+    eliminate_with_options, parse_formula, EliminationOptions, EliminationStats, Formula, Relation,
 };
 use std::io::Read;
 
@@ -9,14 +9,21 @@ fn main() {
         .iter()
         .any(|argument| argument == "--help" || argument == "-h")
     {
-        println!("usage: qe [--stats] [FORMULA]\n       printf '%s' FORMULA | qe [--stats]");
+        println!("usage: qe [--stats] [--special-handling=true|false] [FORMULA]\n       printf '%s' FORMULA | qe [--stats]");
         return;
     }
 
     let show_stats = arguments.iter().any(|argument| argument == "--stats");
+    let special_handling = !arguments
+        .iter()
+        .any(|argument| argument == "--special-handling=false");
     let arguments = arguments
         .into_iter()
-        .filter(|argument| argument != "--stats")
+        .filter(|argument| {
+            argument != "--stats"
+                && argument != "--special-handling=true"
+                && argument != "--special-handling=false"
+        })
         .collect::<Vec<_>>();
 
     let input = if arguments.is_empty() {
@@ -37,7 +44,7 @@ fn main() {
             std::process::exit(2);
         }
     };
-    match eliminate_with_stats(&formula) {
+    match eliminate_with_options(&formula, EliminationOptions { special_handling }) {
         Ok((result, stats)) => {
             println!("{}", format_formula(&result));
             if show_stats {
