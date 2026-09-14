@@ -5,7 +5,7 @@ Current step: Step 5 — finalize.
 ## Step 1: Move the implementation plan
 
 - [x] Delete `IMPLEMENTATION_PLAN.md`.
-- [x] Create this plan at `plan/snapshot.md`.
+- [x] Create this plan at `plans/snapshot.md`.
 - [x] Validate and commit the plan migration as `bd1203d`.
 
 ## Step 2: Add snapshot-test infrastructure
