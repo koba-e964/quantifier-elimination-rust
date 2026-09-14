@@ -35,9 +35,6 @@ Current step: Step 1 — define the named-variable parsing boundary.
 - [ ] Document named variables in `README.md` and `syntax.md`.
 - [ ] Run formatting, tests, Clippy, and pre-commit for each implementation slice.
 
-## Review and commit
+## Implementation commits
 
-- [ ] Show the literal diff for each logical slice.
-- [ ] Pause for approval before each commit.
-- [x] Record plan commit `df2494e`.
-- [ ] Record each subsequent approved implementation commit here.
+- [x] Plan created and committed as `95e56d4`.
