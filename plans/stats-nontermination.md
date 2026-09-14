@@ -1,6 +1,6 @@
 # Stats and non-terminating simple formulas
 
-Current step: Step 2 — define a deterministic elimination-order policy.
+Current step: Step 2 — verify that alternate elimination orders preserve semantics.
 
 ## Observed issue
 
@@ -28,7 +28,7 @@ the sum/product/square relationship.
 - [x] Separate quantified-variable order from free-variable order in the
   recursive CAD dispatcher.
 - [x] Record the current order and candidate orders in the stats report.
-- [ ] Define a deterministic order-selection policy that prioritizes the
+- [x] Define a deterministic order-selection policy that prioritizes the
   variables constrained by the current quantified body and avoids unnecessary
   lifting dimensions.
 - [x] Add an explicit order override for reproducible experiments.
@@ -97,3 +97,4 @@ the sum/product/square relationship.
 - [x] Wait for approval before committing in commit+review mode.
 - [x] Record implementation commit `991e3f4` for special handling.
 - [x] Record implementation commit `4a99f43` for elimination-order reporting and override support.
+- [x] Record implementation commit `6f906d9` for deterministic default order selection.

@@ -370,7 +370,7 @@ fn eliminate_recursive(
                         .collect::<std::collections::BTreeSet<_>>()
                         == free_variables
             })
-            .unwrap_or_else(|| free_variables.iter().copied().collect::<Vec<_>>());
+            .unwrap_or_else(|| select_variable_order(&reduced, &free_variables, *variable));
         variable_order.push(*variable);
         let lifting = lift_recursive(&reduced, &variable_order)?;
         stats.record_recursive_lifting(&lifting);
@@ -378,6 +378,67 @@ fn eliminate_recursive(
             .synthesize_quantifier(&body, *quantifier, *variable)
             .map(|result| simplify(&result))
             .map_err(QuantifierEvaluationError::from)
+    }
+}
+
+fn select_variable_order(
+    formula: &Formula,
+    free_variables: &std::collections::BTreeSet<usize>,
+    quantified_variable: usize,
+) -> Vec<usize> {
+    let mut scores = std::collections::BTreeMap::<usize, (usize, usize)>::new();
+    collect_variable_order_scores(formula, free_variables, quantified_variable, &mut scores);
+
+    let mut variables = free_variables.iter().copied().collect::<Vec<_>>();
+    variables.sort_by_key(|variable| {
+        let (coupling, degree) = scores.get(variable).copied().unwrap_or_default();
+        (
+            std::cmp::Reverse(coupling),
+            std::cmp::Reverse(degree),
+            *variable,
+        )
+    });
+    variables
+}
+
+fn collect_variable_order_scores(
+    formula: &Formula,
+    free_variables: &std::collections::BTreeSet<usize>,
+    quantified_variable: usize,
+    scores: &mut std::collections::BTreeMap<usize, (usize, usize)>,
+) {
+    match formula {
+        Formula::True | Formula::False => {}
+        Formula::Atom(atom) => {
+            if atom
+                .polynomial
+                .variables()
+                .any(|variable| variable == quantified_variable)
+            {
+                for variable in free_variables.iter().copied() {
+                    if atom
+                        .polynomial
+                        .variables()
+                        .any(|candidate| candidate == variable)
+                    {
+                        let entry = scores.entry(variable).or_default();
+                        entry.0 += 1;
+                        entry.1 += atom.polynomial.degree(variable);
+                    }
+                }
+            }
+        }
+        Formula::Not(body) => {
+            collect_variable_order_scores(body, free_variables, quantified_variable, scores)
+        }
+        Formula::And(formulas) | Formula::Or(formulas) => {
+            for formula in formulas {
+                collect_variable_order_scores(formula, free_variables, quantified_variable, scores);
+            }
+        }
+        Formula::Quantified { body, .. } => {
+            collect_variable_order_scores(body, free_variables, quantified_variable, scores)
+        }
     }
 }
 
