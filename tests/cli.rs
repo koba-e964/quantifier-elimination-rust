@@ -111,6 +111,25 @@ fn disabled_special_handling_uses_the_bounded_cad_baseline() {
 }
 
 #[test]
+fn bounds_the_reported_quadratic_baseline_regression() {
+    let child = Command::new(env!("CARGO_BIN_EXE_qe"))
+        .args([
+            "--max-cells=100",
+            "--special-handling=false",
+            "--variable-order=x2,x3,x4",
+            "exists x0. exists x1. x2=x0+x1&&x3=x0*x1&&x4=x0^2+x1^2",
+        ])
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let output = output_with_timeout(child, Duration::from_secs(2))
+        .expect("quadratic CAD baseline exceeded the two-second bound");
+
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("ComplexityLimitExceeded"));
+}
+
+#[test]
 fn prints_linear_multivariate_elimination_results() {
     let output = Command::new(env!("CARGO_BIN_EXE_qe"))
         .arg("exists x1. x0*x1 + x2*x1 - 1 = 0")

@@ -78,7 +78,7 @@ returned.
 
 ## Step 4: Regression coverage
 
-- [ ] Add a bounded CLI regression for `exists x0. exists x1.
+- [x] Add a bounded CLI regression for `exists x0. exists x1.
   x2=x0+x1 && x3=x0*x1 && x4=x0^2+x1^2` with
   `--special-handling=false --variable-order=x2,x3,x4`.
 - [ ] Add a bounded CLI regression for `exists x. exists y.
