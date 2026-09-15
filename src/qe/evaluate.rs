@@ -1,9 +1,9 @@
 use crate::algebra::univariate::UnivariatePolynomial;
+use crate::cad::lifting::lift_two_variables;
 use crate::cad::lifting::{
     decompose_univariate, synthesize_cell_conditions, CadCell, CellKind, FormulaEvaluationError,
     LiftingError, RecursiveLifting, TwoDimensionalLifting, UnivariateCell,
 };
-use crate::cad::lifting::{lift_recursive, lift_two_variables};
 use crate::cad::projection::ProjectionError;
 use crate::formula::{Atom, Formula, Quantifier, Relation};
 use crate::polynomial::Monomial;
@@ -39,6 +39,7 @@ pub struct EliminationOptions {
     pub special_handling: bool,
     pub special_rules: SpecialHandlingConfig,
     pub variable_order: Option<Vec<usize>>,
+    pub max_cells: Option<usize>,
 }
 
 impl Default for EliminationOptions {
@@ -47,6 +48,7 @@ impl Default for EliminationOptions {
             special_handling: true,
             special_rules: SpecialHandlingConfig::default(),
             variable_order: None,
+            max_cells: Some(100),
         }
     }
 }
@@ -286,7 +288,11 @@ fn eliminate_recursive(
             })
             .unwrap_or_else(|| select_variable_order(&reduced, &free_variables, *variable));
         variable_order.push(*variable);
-        let lifting = lift_recursive(&reduced, &variable_order)?;
+        let lifting = crate::cad::lifting::lift_recursive_with_limit(
+            &reduced,
+            &variable_order,
+            options.max_cells,
+        )?;
         stats.record_recursive_lifting(&lifting);
         lifting
             .synthesize_quantifier(&body, *quantifier, *variable)

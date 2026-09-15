@@ -53,6 +53,10 @@ order. The list must be exhaustive and must not contain bound variables;
 invalid orders are rejected. Variable names in the order must match the names
 used in the formula; quantified variables are not eligible for the order.
 
+CAD lifting is bounded by 100 cells by default. Use `--max-cells=N` to choose
+a different positive budget; exceeding it reports the lifting order and
+projection level instead of running without a bound.
+
 Special handling is enabled by default. The current typed special-rule
 configuration supports the symmetric sum/product rule for existential witness
 pairs. It can be loaded from a small TOML-shaped file:

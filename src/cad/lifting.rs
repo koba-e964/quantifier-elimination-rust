@@ -2,7 +2,8 @@ use crate::algebra::algebraic::AlgebraicReal;
 use crate::algebra::coefficient::{AlgebraicPolynomial, AlgebraicRootSample, ExactReal};
 use crate::algebra::univariate::{RootInterval, UnivariatePolynomial};
 use crate::cad::projection::{
-    build_projection_stack, formula_polynomials, ProjectionError, ProjectionStack,
+    build_projection_stack, build_projection_stack_with_limit, formula_polynomials,
+    ProjectionError, ProjectionStack,
 };
 use crate::formula::{Formula, Quantifier, Relation};
 use crate::polynomial::{Polynomial, PolynomialEvaluationError, Variable};
@@ -38,6 +39,12 @@ pub enum FormulaEvaluationError {
 pub enum LiftingError {
     Projection(ProjectionError),
     AlgebraicCoefficientRootUnsupported,
+    ComplexityLimitExceeded {
+        limit: usize,
+        cells: usize,
+        projection_level: usize,
+        variable_order: Vec<Variable>,
+    },
 }
 
 impl From<ProjectionError> for LiftingError {
@@ -535,8 +542,23 @@ pub fn lift_recursive(
     formula: &Formula,
     variable_order: &[Variable],
 ) -> Result<RecursiveLifting, LiftingError> {
-    let projection_stack = build_projection_stack(formula, variable_order)?;
-    let cells = lift_recursive_level(&projection_stack, 0, &BTreeMap::new())?;
+    lift_recursive_with_limit(formula, variable_order, None)
+}
+
+pub fn lift_recursive_with_limit(
+    formula: &Formula,
+    variable_order: &[Variable],
+    max_cells: Option<usize>,
+) -> Result<RecursiveLifting, LiftingError> {
+    let projection_stack = build_projection_stack_with_limit(formula, variable_order, max_cells)?;
+    let mut cells_constructed = 0;
+    let cells = lift_recursive_level(
+        &projection_stack,
+        0,
+        &BTreeMap::new(),
+        max_cells,
+        &mut cells_constructed,
+    )?;
     Ok(RecursiveLifting {
         projection_stack,
         cells,
@@ -547,6 +569,8 @@ fn lift_recursive_level(
     stack: &ProjectionStack,
     coordinate_index: usize,
     values: &BTreeMap<Variable, ExactReal>,
+    max_cells: Option<usize>,
+    cells_constructed: &mut usize,
 ) -> Result<Vec<CadCell>, LiftingError> {
     let variable_order = &stack.variable_order;
     if coordinate_index == variable_order.len() {
@@ -560,6 +584,18 @@ fn lift_recursive_level(
         .map(|polynomial| specialize_to_algebraic_univariate(polynomial, variable, values))
         .collect::<Result<Vec<_>, _>>()?;
     let cells = decompose_specialized_cells(&specialized)?;
+    if let Some(limit) = max_cells {
+        let next_cells = cells_constructed.saturating_add(cells.len());
+        if next_cells > limit {
+            return Err(LiftingError::ComplexityLimitExceeded {
+                limit,
+                cells: next_cells,
+                projection_level,
+                variable_order: variable_order.clone(),
+            });
+        }
+        *cells_constructed = next_cells;
+    }
     cells
         .into_iter()
         .map(|coordinate| {
@@ -568,7 +604,13 @@ fn lift_recursive_level(
             let children = if coordinate_index + 1 == variable_order.len() {
                 Vec::new()
             } else {
-                lift_recursive_level(stack, coordinate_index + 1, &child_values)?
+                lift_recursive_level(
+                    stack,
+                    coordinate_index + 1,
+                    &child_values,
+                    max_cells,
+                    cells_constructed,
+                )?
             };
             Ok(CadCell {
                 coordinate,

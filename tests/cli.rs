@@ -63,6 +63,38 @@ fn reports_parse_errors_with_a_nonzero_status() {
 }
 
 #[test]
+fn rejects_nonpositive_cell_budgets() {
+    let output = Command::new(env!("CARGO_BIN_EXE_qe"))
+        .args(["--max-cells=0", "exists x0. x0 = 0"])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("--max-cells requires a positive integer")
+    );
+}
+
+#[test]
+fn reports_when_the_cell_budget_is_exceeded() {
+    let output = Command::new(env!("CARGO_BIN_EXE_qe"))
+        .args([
+            "--max-cells=1",
+            "--special-handling=false",
+            "--variable-order=x2,x3,x4",
+            "exists x0. exists x1. x2=x0+x1&&x3=x0*x1&&x4=x0^2+x1^2",
+        ])
+        .output()
+        .unwrap();
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("ComplexityLimitExceeded"));
+    assert!(stderr.contains("projection_level"));
+    assert!(stderr.contains("variable_order"));
+}
+
+#[test]
 fn prints_linear_multivariate_elimination_results() {
     let output = Command::new(env!("CARGO_BIN_EXE_qe"))
         .arg("exists x1. x0*x1 + x2*x1 - 1 = 0")

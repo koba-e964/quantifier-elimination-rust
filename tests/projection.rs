@@ -1,5 +1,5 @@
 use quantifier_elimination::cad::projection::{
-    build_projection_stack, project, resultant, ProjectionError,
+    build_projection_stack, build_projection_stack_with_limit, project, resultant, ProjectionError,
 };
 use quantifier_elimination::{Formula, Polynomial, Relation};
 
@@ -66,5 +66,22 @@ fn rejects_invalid_variable_orders() {
     assert_eq!(
         build_projection_stack(&formula, &[0, 0]),
         Err(ProjectionError::DuplicateVariable(0))
+    );
+}
+
+#[test]
+fn rejects_projection_stacks_over_the_polynomial_budget() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let formula = Formula::atom(x.clone() * x + y, Relation::Equal);
+
+    assert_eq!(
+        build_projection_stack_with_limit(&formula, &[0, 1], Some(1)),
+        Err(ProjectionError::ComplexityLimitExceeded {
+            limit: 1,
+            polynomials: 2,
+            projection_level: 1,
+            variable_order: vec![0, 1],
+        })
     );
 }

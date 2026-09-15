@@ -70,7 +70,7 @@ returned.
 - [x] Treat `--variable-order=a,b,...` as precedence: use listed variables
   present in each recursive free-variable set, then append omitted variables
   using the deterministic default selector.
-- [ ] Add a bounded CAD complexity guard that reports the quantified variable,
+- [x] Add a bounded CAD complexity guard that reports the quantified variable,
   lifting order, projection level, and cell count when a case exceeds its
   configured budget.
 - [ ] Ensure special handling disabled remains a valid exact baseline and does

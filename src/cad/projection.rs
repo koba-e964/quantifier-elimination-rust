@@ -8,26 +8,51 @@ use std::collections::BTreeSet;
 /// discriminant resultants of the supplied polynomials after projecting
 /// `variable` away.
 pub fn project(polynomials: &[Polynomial], variable: Variable) -> Vec<Polynomial> {
+    project_with_limit(polynomials, variable, None, 0, &[]).expect("unbounded projection")
+}
+
+fn project_with_limit(
+    polynomials: &[Polynomial],
+    variable: Variable,
+    max_polynomials: Option<usize>,
+    projection_level: usize,
+    variable_order: &[Variable],
+) -> Result<Vec<Polynomial>, ProjectionError> {
     let mut result = Vec::new();
     for polynomial in polynomials {
         for degree in 0..=polynomial.degree(variable) {
-            push_unique(&mut result, polynomial.coefficient_in(variable, degree));
+            push_unique_with_limit(
+                &mut result,
+                polynomial.coefficient_in(variable, degree),
+                max_polynomials,
+                projection_level,
+                variable_order,
+            )?;
         }
         if polynomial.degree(variable) > 0 {
             let derivative = polynomial.derivative(variable);
-            push_unique(&mut result, resultant(polynomial, &derivative, variable));
+            push_unique_with_limit(
+                &mut result,
+                resultant(polynomial, &derivative, variable),
+                max_polynomials,
+                projection_level,
+                variable_order,
+            )?;
         }
     }
 
     for left in 0..polynomials.len() {
         for right in (left + 1)..polynomials.len() {
-            push_unique(
+            push_unique_with_limit(
                 &mut result,
                 resultant(&polynomials[left], &polynomials[right], variable),
-            );
+                max_polynomials,
+                projection_level,
+                variable_order,
+            )?;
         }
     }
-    result
+    Ok(result)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -40,6 +65,12 @@ pub struct ProjectionStack {
 pub enum ProjectionError {
     DuplicateVariable(Variable),
     MissingVariable(Variable),
+    ComplexityLimitExceeded {
+        limit: usize,
+        polynomials: usize,
+        projection_level: usize,
+        variable_order: Vec<Variable>,
+    },
 }
 
 /// Build projection sets from the input atoms, eliminating variables from
@@ -47,6 +78,14 @@ pub enum ProjectionError {
 pub fn build_projection_stack(
     formula: &Formula,
     variable_order: &[Variable],
+) -> Result<ProjectionStack, ProjectionError> {
+    build_projection_stack_with_limit(formula, variable_order, None)
+}
+
+pub fn build_projection_stack_with_limit(
+    formula: &Formula,
+    variable_order: &[Variable],
+    max_polynomials: Option<usize>,
 ) -> Result<ProjectionStack, ProjectionError> {
     let polynomials = formula_polynomials(formula);
     let required = polynomials
@@ -72,9 +111,35 @@ pub fn build_projection_stack(
         return Err(ProjectionError::MissingVariable(*missing));
     }
     let mut current = polynomials;
+    if let Some(limit) = max_polynomials {
+        if current.len() > limit {
+            return Err(ProjectionError::ComplexityLimitExceeded {
+                limit,
+                polynomials: current.len(),
+                projection_level: 0,
+                variable_order: variable_order.to_vec(),
+            });
+        }
+    }
     let mut levels = vec![current.clone()];
-    for variable in variable_order.iter().rev().copied() {
-        current = project(&current, variable);
+    for (projection_level, variable) in variable_order.iter().rev().copied().enumerate() {
+        current = project_with_limit(
+            &current,
+            variable,
+            max_polynomials,
+            projection_level + 1,
+            variable_order,
+        )?;
+        if let Some(limit) = max_polynomials {
+            if current.len() > limit {
+                return Err(ProjectionError::ComplexityLimitExceeded {
+                    limit,
+                    polynomials: current.len(),
+                    projection_level: projection_level + 1,
+                    variable_order: variable_order.to_vec(),
+                });
+            }
+        }
         levels.push(current.clone());
     }
     Ok(ProjectionStack {
@@ -172,4 +237,25 @@ fn push_unique(result: &mut Vec<Polynomial>, polynomial: Polynomial) {
     if !polynomial.is_zero() && !result.contains(&polynomial) {
         result.push(polynomial);
     }
+}
+
+fn push_unique_with_limit(
+    result: &mut Vec<Polynomial>,
+    polynomial: Polynomial,
+    max_polynomials: Option<usize>,
+    projection_level: usize,
+    variable_order: &[Variable],
+) -> Result<(), ProjectionError> {
+    push_unique(result, polynomial);
+    if let Some(limit) = max_polynomials {
+        if result.len() > limit {
+            return Err(ProjectionError::ComplexityLimitExceeded {
+                limit,
+                polynomials: result.len(),
+                projection_level,
+                variable_order: variable_order.to_vec(),
+            });
+        }
+    }
+    Ok(())
 }

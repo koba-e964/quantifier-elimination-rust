@@ -10,11 +10,18 @@ fn main() {
         .iter()
         .any(|argument| argument == "--help" || argument == "-h")
     {
-        println!("usage: qe [--stats] [--special-handling=true|false] [--special-rules=PATH] [--variable-order=xN,xN,...] [FORMULA]\n       printf '%s' FORMULA | qe [--stats]");
+        println!("usage: qe [--stats] [--max-cells=N] [--special-handling=true|false] [--special-rules=PATH] [--variable-order=xN,xN,...] [FORMULA]\n       printf '%s' FORMULA | qe [--stats]");
         return;
     }
 
     let show_stats = arguments.iter().any(|argument| argument == "--stats");
+    let max_cells = match parse_max_cells(&arguments) {
+        Ok(limit) => limit,
+        Err(error) => {
+            eprintln!("qe: {error}");
+            std::process::exit(2);
+        }
+    };
     let special_handling = !arguments
         .iter()
         .any(|argument| argument == "--special-handling=false");
@@ -36,6 +43,7 @@ fn main() {
         .into_iter()
         .filter(|argument| {
             argument != "--stats"
+                && !argument.starts_with("--max-cells=")
                 && argument != "--special-handling=true"
                 && argument != "--special-handling=false"
                 && !argument.starts_with("--variable-order=")
@@ -80,6 +88,7 @@ fn main() {
             special_handling,
             special_rules,
             variable_order,
+            max_cells,
         },
     ) {
         Ok((result, stats)) => {
@@ -107,6 +116,23 @@ fn parse_special_rules(arguments: &[String]) -> Result<SpecialHandlingConfig, St
         return Err("--special-rules requires a file path".to_owned());
     }
     SpecialHandlingConfig::from_file(path)
+}
+
+fn parse_max_cells(arguments: &[String]) -> Result<Option<usize>, String> {
+    let Some(argument) = arguments
+        .iter()
+        .find(|argument| argument.starts_with("--max-cells="))
+    else {
+        return Ok(Some(100));
+    };
+    let value = argument.trim_start_matches("--max-cells=");
+    let limit = value
+        .parse::<usize>()
+        .map_err(|_| "--max-cells requires a positive integer".to_owned())?;
+    if limit == 0 {
+        return Err("--max-cells requires a positive integer".to_owned());
+    }
+    Ok(Some(limit))
 }
 
 fn parse_variable_order(arguments: &[String]) -> Result<Option<Vec<String>>, String> {
