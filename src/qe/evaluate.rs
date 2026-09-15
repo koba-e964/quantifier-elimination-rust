@@ -306,15 +306,16 @@ fn select_variable_order(
     free_variables: &std::collections::BTreeSet<usize>,
     quantified_variable: usize,
 ) -> Vec<usize> {
-    let mut scores = std::collections::BTreeMap::<usize, (usize, usize)>::new();
+    let mut scores = std::collections::BTreeMap::<usize, (usize, usize, usize)>::new();
     collect_variable_order_scores(formula, free_variables, quantified_variable, &mut scores);
 
     let mut variables = free_variables.iter().copied().collect::<Vec<_>>();
     variables.sort_by_key(|variable| {
-        let (coupling, degree) = scores.get(variable).copied().unwrap_or_default();
+        let (coupling, degree, participation) = scores.get(variable).copied().unwrap_or_default();
         (
             std::cmp::Reverse(coupling),
             std::cmp::Reverse(degree),
+            std::cmp::Reverse(participation),
             *variable,
         )
     });
@@ -348,7 +349,7 @@ fn collect_variable_order_scores(
     formula: &Formula,
     free_variables: &std::collections::BTreeSet<usize>,
     quantified_variable: usize,
-    scores: &mut std::collections::BTreeMap<usize, (usize, usize)>,
+    scores: &mut std::collections::BTreeMap<usize, (usize, usize, usize)>,
 ) {
     match formula {
         Formula::True | Formula::False => {}
@@ -359,14 +360,22 @@ fn collect_variable_order_scores(
                 .any(|variable| variable == quantified_variable)
             {
                 for variable in free_variables.iter().copied() {
-                    if atom
+                    if !atom
                         .polynomial
                         .variables()
                         .any(|candidate| candidate == variable)
                     {
-                        let entry = scores.entry(variable).or_default();
-                        entry.0 += 1;
-                        entry.1 += atom.polynomial.degree(variable);
+                        continue;
+                    }
+                    let entry = scores.entry(variable).or_default();
+                    entry.2 += 1;
+                    for (monomial, _) in atom.polynomial.terms() {
+                        if monomial.exponent(quantified_variable) > 0
+                            && monomial.exponent(variable) > 0
+                        {
+                            entry.0 += 1;
+                            entry.1 += monomial.exponent(variable);
+                        }
                     }
                 }
             }

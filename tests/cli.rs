@@ -288,6 +288,18 @@ fn accepts_named_variable_order() {
 }
 
 #[test]
+fn automatically_prefers_a_mixed_variable_before_an_additive_variable() {
+    let output = Command::new(env!("CARGO_BIN_EXE_qe"))
+        .args(["--stats", "exists t. y = t*x+t^2"])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "4*y + x^2 >= 0\n");
+    assert!(String::from_utf8_lossy(&output.stderr).contains("lifting order 0: x -> y -> t"));
+}
+
+#[test]
 fn rejects_duplicate_named_variable_order_entries() {
     let output = Command::new(env!("CARGO_BIN_EXE_qe"))
         .args(["--variable-order=st,st", "exists x. x^2 + st + y = 0"])

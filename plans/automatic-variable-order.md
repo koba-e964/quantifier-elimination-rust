@@ -1,0 +1,75 @@
+# Automatic variable elimination order
+
+Current step: Step 2 — define automatic-order selection.
+
+## Objective
+
+Automatically choose a free-variable lifting order that avoids unsupported
+algebraic-root lifting when an equivalent order is available, while preserving
+exact results and keeping explicit `--variable-order` behavior reproducible.
+
+## Step 1: Reproduce and characterize order sensitivity [x]
+
+- [x] Record the reported formula and both explicit orders as bounded CLI
+  regressions to investigate:
+  - `exists t. y = t*x+t^2` with `x,y`.
+  - `exists t. y = t*x+t^2` with `y,x`.
+- [x] Run the same formula without `--variable-order` and record the selected
+  order and result: the default path selects `x -> y -> t` and returns
+  `4*y + x^2 >= 0`.
+- [x] Trace why the `y,x,t` lifting path reaches
+  `AlgebraicRootSampleUnsupported` while `x,y,t` succeeds.
+- [x] Identify order-quality signals that are available before lifting:
+  quantified-variable degree and mixed quantified/free monomial coupling are
+  available in the polynomial structure; algebraic section creation and the
+  cell budget remain runtime signals for a later fallback slice.
+
+Finding: named free variables are assigned by first appearance, so the
+reported formula initially scores as `y = 0`, `x = 1`. The old tie-breaker
+therefore selected `y -> x -> t`; the successful order is `x -> y -> t`
+because `t*x` is a mixed quantified/free monomial while `y` is additive.
+
+## Step 2: Define automatic-order selection [-]
+
+- [x] Specify a deterministic candidate-order policy for every recursive
+  quantifier-elimination call.
+- [x] Prefer orders that keep the quantified variable’s defining polynomial
+  univariate over rational samples before introducing algebraic coefficient
+  sections.
+- [x] Preserve the existing score-based selector as the deterministic
+  tie-breaker.
+- [ ] Define whether automatic selection may try a second exact order after a
+  supported lifting failure or budget rejection.
+- [ ] Keep explicit `--variable-order` as a strict user-requested order; do
+  not silently reorder it.
+
+## Step 3: Implement adaptive exact selection
+
+- [ ] Add the order-selection/adaptation logic in the quantifier evaluation
+  layer rather than in the CLI parser.
+- [ ] Ensure every candidate attempt uses exact arithmetic and does not reuse
+  partial CAD state from a failed order.
+- [ ] Record the selected order and attempted alternatives in stats when
+  `--stats` is enabled.
+- [ ] Return the original error with useful order context when no candidate is
+  supported.
+
+## Step 4: Regression and semantic coverage
+
+- [ ] Add CLI coverage showing the default order succeeds for the reported
+  formula.
+- [ ] Keep explicit `x,y` and `y,x` tests: the explicit-order contract and
+  their documented outcomes must remain clear.
+- [ ] Add a case where the first automatic candidate fails and a later exact
+  candidate succeeds.
+- [ ] Compare automatic and explicit successful results semantically at exact
+  rational and algebraic assignments.
+- [ ] Add a bounded regression for a formula where all candidate orders remain
+  unsupported, ensuring failure is deterministic and informative.
+
+## Step 5: Documentation
+
+- [ ] Document the automatic-order policy and fallback behavior in `README.md`.
+- [ ] Document that `--variable-order` disables automatic reordering and is
+  intended for reproducible experiments.
+- [ ] Document the new stats fields, if any, for selected and attempted orders.
