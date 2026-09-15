@@ -1,4 +1,7 @@
-use super::linear::remove_redundant_linear_disjuncts;
+use super::linear::{
+    merge_semantically_adjacent_linear_disjuncts, minimize_linear_disjunction,
+    remove_redundant_linear_disjuncts,
+};
 use super::simplify::{simplify, simplify_conjunction};
 use crate::formula::{Formula, Relation};
 use crate::polynomial::Polynomial;
@@ -124,10 +127,14 @@ pub(crate) fn simplify_disjunction(formulas: &[Formula]) -> Formula {
     if let Some(cubic_result) = simplify_cubic_symmetric_sign_partition(&simplified) {
         return cubic_result;
     }
+    if let Some(minimized) = minimize_linear_disjunction(simplified.clone()) {
+        simplified = minimized;
+    }
     loop {
         let previous = simplified.clone();
         simplified = merge_complete_sign_partitions(simplified);
         simplified = merge_adjacent_sign_relations(simplified);
+        simplified = merge_semantically_adjacent_linear_disjuncts(simplified);
         simplified = remove_redundant_linear_disjuncts(simplified);
         if simplified == previous {
             break;

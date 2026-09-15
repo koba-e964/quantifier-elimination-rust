@@ -4,6 +4,10 @@ use num_rational::BigRational;
 use num_traits::{Signed, Zero};
 use std::collections::BTreeMap;
 
+const NEGATIVE: u8 = 1;
+const ZERO: u8 = 2;
+const POSITIVE: u8 = 4;
+
 #[derive(Clone, Debug)]
 enum LinearBound {
     Lower { value: BigRational, strict: bool },
@@ -419,6 +423,333 @@ pub(crate) fn remove_redundant_linear_disjuncts(mut formulas: Vec<Formula>) -> V
         .enumerate()
         .filter_map(|(index, formula)| (!redundant[index]).then_some(formula))
         .collect()
+}
+
+pub(crate) fn merge_semantically_adjacent_linear_disjuncts(
+    mut formulas: Vec<Formula>,
+) -> Vec<Formula> {
+    loop {
+        let terms = formulas
+            .iter()
+            .map(|formula| match formula {
+                Formula::And(formulas) => formulas.clone(),
+                formula => vec![formula.clone()],
+            })
+            .collect::<Vec<_>>();
+        let mut replacement = None;
+        'pairs: for left_index in 0..terms.len() {
+            for right_index in (left_index + 1)..terms.len() {
+                let left = &terms[left_index];
+                let right = &terms[right_index];
+                if left
+                    .iter()
+                    .chain(right.iter())
+                    .any(|formula| !is_linear_atom(formula))
+                {
+                    continue;
+                }
+                let candidates = left
+                    .iter()
+                    .chain(right.iter())
+                    .filter(|formula| {
+                        linear_conjunction_implies(left, std::slice::from_ref(formula))
+                            && linear_conjunction_implies(right, std::slice::from_ref(formula))
+                    })
+                    .fold(Vec::<Formula>::new(), |mut candidates, formula| {
+                        if !candidates.contains(formula) {
+                            candidates.push(formula.clone());
+                        }
+                        candidates
+                    });
+                if candidates.is_empty()
+                    || candidates.len() >= left.len().max(right.len())
+                    || !linear_union_covers(&candidates, &[left, right])
+                {
+                    continue;
+                }
+                replacement = Some((left_index, right_index, candidates));
+                break 'pairs;
+            }
+        }
+        let Some((left_index, right_index, candidates)) = replacement else {
+            return formulas;
+        };
+        formulas.remove(right_index);
+        formulas[left_index] = match candidates.len() {
+            1 => candidates.into_iter().next().unwrap(),
+            _ => Formula::And(candidates),
+        };
+    }
+}
+
+/// Minimize a finite disjunction of linear sign regions without changing its truth set.
+pub(crate) fn minimize_linear_disjunction(formulas: Vec<Formula>) -> Option<Vec<Formula>> {
+    let terms = formulas
+        .iter()
+        .map(|formula| match formula {
+            Formula::And(formulas) => formulas.clone(),
+            formula => vec![formula.clone()],
+        })
+        .collect::<Vec<_>>();
+    if terms
+        .iter()
+        .flatten()
+        .any(|formula| !is_linear_atom(formula))
+    {
+        return None;
+    }
+    let polynomials = terms
+        .iter()
+        .flatten()
+        .filter_map(|formula| match formula {
+            Formula::Atom(atom) => Some(atom.polynomial.clone()),
+            _ => None,
+        })
+        .fold(Vec::<Polynomial>::new(), |mut polynomials, polynomial| {
+            if !polynomials.contains(&polynomial) {
+                polynomials.push(polynomial);
+            }
+            polynomials
+        });
+    if polynomials.is_empty() || polynomials.len() > 8 {
+        return None;
+    }
+    let mut assignments = Vec::new();
+    enumerate_sign_cells(&polynomials, &mut Vec::new(), &mut assignments);
+    let feasible = assignments
+        .into_iter()
+        .filter(|assignment| sign_assignment_feasible(&polynomials, assignment))
+        .collect::<Vec<_>>();
+    if feasible.is_empty() {
+        return None;
+    }
+    let truth = feasible
+        .iter()
+        .map(|assignment| sign_assignment_satisfies(&terms, &polynomials, assignment))
+        .collect::<Vec<_>>();
+    let true_count = truth.iter().filter(|value| **value).count();
+    if true_count == 0 || true_count == feasible.len() {
+        return None;
+    }
+    let mut cubes = Vec::new();
+    for (index, assignment) in feasible.iter().enumerate() {
+        if !truth[index] {
+            continue;
+        }
+        let mut cube = assignment.clone();
+        for polynomial_index in 0..cube.len() {
+            let current = cube[polynomial_index];
+            let mut options = [
+                NEGATIVE | ZERO | POSITIVE,
+                NEGATIVE | ZERO,
+                ZERO | POSITIVE,
+                NEGATIVE | POSITIVE,
+            ]
+            .into_iter()
+            .filter(|mask| mask & current == current)
+            .collect::<Vec<_>>();
+            options.sort_by_key(|mask| std::cmp::Reverse(mask.count_ones()));
+            for mask in options {
+                cube[polynomial_index] = mask;
+                if cube_is_true(&cube, &feasible, &truth) {
+                    break;
+                }
+                cube[polynomial_index] = current;
+            }
+        }
+        if !cubes.contains(&cube) {
+            cubes.push(cube);
+        }
+    }
+    cubes.sort_by_key(|cube| {
+        std::cmp::Reverse(cube.iter().map(|mask| mask.count_ones()).sum::<u32>())
+    });
+    let mut covered = vec![false; feasible.len()];
+    let mut selected = Vec::new();
+    while covered
+        .iter()
+        .zip(&truth)
+        .any(|(is_covered, is_true)| *is_true && !is_covered)
+    {
+        let (cube_index, _) = cubes
+            .iter()
+            .enumerate()
+            .map(|(cube_index, cube)| {
+                let gain = feasible
+                    .iter()
+                    .enumerate()
+                    .filter(|(index, assignment)| {
+                        truth[*index] && !covered[*index] && cube_matches(cube, assignment)
+                    })
+                    .count();
+                (cube_index, gain)
+            })
+            .max_by_key(|(_, gain)| *gain)?;
+        if selected.contains(&cube_index) {
+            return None;
+        }
+        let cube = &cubes[cube_index];
+        let gain = feasible
+            .iter()
+            .enumerate()
+            .filter(|(index, assignment)| {
+                truth[*index] && !covered[*index] && cube_matches(cube, assignment)
+            })
+            .count();
+        if gain == 0 {
+            return None;
+        }
+        for (index, assignment) in feasible.iter().enumerate() {
+            if cube_matches(cube, assignment) {
+                covered[index] = true;
+            }
+        }
+        selected.push(cube_index);
+    }
+    let result = selected
+        .into_iter()
+        .map(|index| cube_to_formula(&polynomials, &cubes[index]))
+        .collect::<Vec<_>>();
+    (result != formulas).then_some(result)
+}
+
+fn enumerate_sign_cells(
+    polynomials: &[Polynomial],
+    prefix: &mut Vec<u8>,
+    assignments: &mut Vec<Vec<u8>>,
+) {
+    if prefix.len() == polynomials.len() {
+        assignments.push(prefix.clone());
+        return;
+    }
+    for sign in [NEGATIVE, ZERO, POSITIVE] {
+        prefix.push(sign);
+        enumerate_sign_cells(polynomials, prefix, assignments);
+        prefix.pop();
+    }
+}
+
+fn sign_assignment_feasible(polynomials: &[Polynomial], assignment: &[u8]) -> bool {
+    let constraints = polynomials
+        .iter()
+        .zip(assignment)
+        .flat_map(|(polynomial, sign)| {
+            let relation = match *sign {
+                NEGATIVE => Relation::Less,
+                ZERO => Relation::Equal,
+                POSITIVE => Relation::Greater,
+                _ => unreachable!(),
+            };
+            atom_constraints_for_relation(polynomial, relation)
+        })
+        .collect();
+    linear_constraints_feasible(constraints)
+}
+
+fn sign_assignment_satisfies(
+    terms: &[Vec<Formula>],
+    polynomials: &[Polynomial],
+    assignment: &[u8],
+) -> bool {
+    terms.iter().any(|term| {
+        term.iter().all(|formula| {
+            let Formula::Atom(atom) = formula else {
+                return false;
+            };
+            let sign = assignment[polynomials
+                .iter()
+                .position(|polynomial| polynomial == &atom.polynomial)
+                .unwrap()];
+            match atom.relation {
+                Relation::Less => sign == NEGATIVE,
+                Relation::Equal => sign == ZERO,
+                Relation::Greater => sign == POSITIVE,
+                Relation::LessOrEqual => sign & (NEGATIVE | ZERO) != 0,
+                Relation::NotEqual => sign != ZERO,
+                Relation::GreaterOrEqual => sign & (ZERO | POSITIVE) != 0,
+            }
+        })
+    })
+}
+
+fn cube_is_true(cube: &[u8], assignments: &[Vec<u8>], truth: &[bool]) -> bool {
+    assignments
+        .iter()
+        .enumerate()
+        .filter(|(_, assignment)| cube_matches(cube, assignment))
+        .all(|(index, _)| truth[index])
+}
+
+fn cube_matches(cube: &[u8], assignment: &[u8]) -> bool {
+    cube.iter()
+        .zip(assignment)
+        .all(|(mask, sign)| mask & sign != 0)
+}
+
+fn cube_to_formula(polynomials: &[Polynomial], cube: &[u8]) -> Formula {
+    let atoms = polynomials
+        .iter()
+        .zip(cube)
+        .filter_map(|(polynomial, mask)| {
+            let relation = match *mask {
+                NEGATIVE => Relation::Less,
+                ZERO => Relation::Equal,
+                POSITIVE => Relation::Greater,
+                mask if mask == NEGATIVE | ZERO => Relation::LessOrEqual,
+                mask if mask == ZERO | POSITIVE => Relation::GreaterOrEqual,
+                mask if mask == NEGATIVE | POSITIVE => Relation::NotEqual,
+                _ => return None,
+            };
+            Some(Formula::atom(polynomial.clone(), relation))
+        })
+        .collect::<Vec<_>>();
+    match atoms.len() {
+        0 => Formula::True,
+        1 => atoms.into_iter().next().unwrap(),
+        _ => Formula::And(atoms),
+    }
+}
+
+fn is_linear_atom(formula: &Formula) -> bool {
+    matches!(
+        formula,
+        Formula::Atom(atom)
+            if atom.relation != Relation::NotEqual && is_linear_polynomial(&atom.polynomial)
+    )
+}
+
+fn linear_union_covers(candidate: &[Formula], terms: &[&Vec<Formula>]) -> bool {
+    let candidate_constraints = candidate
+        .iter()
+        .flat_map(|formula| match formula {
+            Formula::Atom(atom) => atom_constraints(atom, false),
+            _ => None,
+        })
+        .flatten()
+        .collect::<Vec<_>>();
+    let mut outside = vec![Vec::new()];
+    for term in terms {
+        let negations = term
+            .iter()
+            .filter_map(formula_negation_alternatives)
+            .flatten()
+            .collect::<Vec<_>>();
+        outside = outside
+            .into_iter()
+            .flat_map(|prefix| {
+                negations.iter().map(move |negation| {
+                    let mut constraints = prefix.clone();
+                    constraints.extend(negation.clone());
+                    constraints
+                })
+            })
+            .collect();
+    }
+    outside.into_iter().all(|negations| {
+        let mut constraints = candidate_constraints.clone();
+        constraints.extend(negations);
+        !linear_constraints_feasible(constraints)
+    })
 }
 
 fn linear_conjunction_implies(source: &[Formula], target: &[Formula]) -> bool {
