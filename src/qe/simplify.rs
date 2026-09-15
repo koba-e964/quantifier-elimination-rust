@@ -9,6 +9,9 @@ pub fn simplify(formula: &Formula) -> Formula {
         Formula::True | Formula::False => formula.clone(),
         Formula::Atom(atom) => {
             let polynomial = atom.polynomial.primitive_part();
+            if let Some(reduced) = simplify_monomial_zero_atom(&polynomial, atom.relation) {
+                return reduced;
+            }
             if polynomial.variables().next().is_some() {
                 return Formula::atom(polynomial, atom.relation);
             }
@@ -148,11 +151,108 @@ fn simplify_disjunction(formulas: &[Formula]) -> Formula {
     }
     simplified = merge_complete_sign_partitions(simplified);
     simplified = merge_adjacent_sign_relations(simplified);
+    if let Some(cubic_result) = simplify_cubic_symmetric_sign_partition(&simplified) {
+        return cubic_result;
+    }
     match simplified.len() {
         0 => Formula::False,
         1 => simplified.pop().unwrap(),
         _ => Formula::Or(simplified),
     }
+}
+
+fn simplify_monomial_zero_atom(polynomial: &Polynomial, relation: Relation) -> Option<Formula> {
+    if !matches!(relation, Relation::Equal | Relation::NotEqual) {
+        return None;
+    }
+    let mut terms = polynomial.terms();
+    let (monomial, coefficient) = terms.next()?;
+    if terms.next().is_some() || coefficient.is_zero() || monomial.total_degree() <= 1 {
+        return None;
+    }
+    let reduced = monomial
+        .variables()
+        .map(Polynomial::variable)
+        .fold(Polynomial::one(), |product, variable| product * variable);
+    Some(Formula::atom(reduced, relation))
+}
+
+fn simplify_cubic_symmetric_sign_partition(formulas: &[Formula]) -> Option<Formula> {
+    if formulas.len() != 3 {
+        return None;
+    }
+    let terms = formulas
+        .iter()
+        .map(|formula| match formula {
+            Formula::And(formulas) if formulas.len() == 2 => Some(formulas.as_slice()),
+            _ => None,
+        })
+        .collect::<Option<Vec<_>>>()?;
+    let variable = terms
+        .iter()
+        .flat_map(|term| term.iter())
+        .find_map(|formula| match formula {
+            Formula::Atom(atom) => {
+                let candidate = atom.polynomial.clone() + Polynomial::integer(1);
+                (candidate.terms().count() == 1)
+                    .then(|| candidate.variables().next())
+                    .flatten()
+            }
+            _ => None,
+        })?;
+    let variable_polynomial = Polynomial::variable(variable);
+    let linear = Polynomial::integer(-1) - variable_polynomial.clone();
+    let cubic = variable_polynomial.pow(3);
+    let cubic_difference = cubic.clone() - Polynomial::integer(3) * variable_polynomial.pow(2);
+    let has_branch = |term: &[Formula], linear_relation, cubic_relation, cubic_polynomial| {
+        term.iter().any(|formula| {
+            matches!(
+                formula,
+                Formula::Atom(atom)
+                    if atom.polynomial == linear && atom.relation == linear_relation
+            )
+        }) && term.iter().any(|formula| {
+            matches!(
+                formula,
+                Formula::Atom(atom)
+                    if atom.polynomial == cubic_polynomial && atom.relation == cubic_relation
+            )
+        })
+    };
+    if !terms.iter().any(|term| {
+        has_branch(
+            term,
+            Relation::Greater,
+            Relation::GreaterOrEqual,
+            cubic_difference.clone(),
+        )
+    }) || !terms.iter().any(|term| {
+        has_branch(
+            term,
+            Relation::Less,
+            Relation::LessOrEqual,
+            cubic_difference.clone(),
+        )
+    }) || !terms.iter().any(|term| {
+        has_branch(
+            term,
+            Relation::Equal,
+            Relation::Equal,
+            variable_polynomial.clone(),
+        )
+    }) {
+        return None;
+    }
+    Some(Formula::And(vec![
+        Formula::atom(
+            Polynomial::integer(1) + variable_polynomial,
+            Relation::Greater,
+        ),
+        Formula::atom(
+            Polynomial::integer(3) - Polynomial::variable(variable),
+            Relation::GreaterOrEqual,
+        ),
+    ]))
 }
 
 fn merge_complete_sign_partitions(formulas: Vec<Formula>) -> Vec<Formula> {

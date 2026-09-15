@@ -107,6 +107,55 @@ fn simplifies_atoms_up_to_positive_polynomial_scaling() {
 }
 
 #[test]
+fn simplifies_a_monomial_zero_equation() {
+    let x = Polynomial::variable(0);
+
+    assert_eq!(
+        simplify(&Formula::atom(x.pow(3), Relation::Equal)),
+        Formula::atom(x, Relation::Equal)
+    );
+}
+
+#[test]
+fn simplifies_the_cubic_symmetric_sign_partition() {
+    let k = Polynomial::variable(0);
+    let result = simplify(&Formula::Or(vec![
+        Formula::And(vec![
+            Formula::atom(Polynomial::integer(-1) - k.clone(), Relation::Greater),
+            Formula::atom(
+                k.clone().pow(3) - Polynomial::integer(3) * k.clone().pow(2),
+                Relation::GreaterOrEqual,
+            ),
+        ]),
+        Formula::And(vec![
+            Formula::atom(Polynomial::integer(-1) - k.clone(), Relation::Less),
+            Formula::atom(
+                k.clone().pow(3) - Polynomial::integer(3) * k.clone().pow(2),
+                Relation::LessOrEqual,
+            ),
+        ]),
+        Formula::And(vec![
+            Formula::atom(Polynomial::integer(-1) - k.clone(), Relation::Equal),
+            Formula::atom(k.pow(3), Relation::Equal),
+        ]),
+    ]));
+
+    assert_eq!(
+        result,
+        Formula::And(vec![
+            Formula::atom(
+                Polynomial::integer(1) + Polynomial::variable(0),
+                Relation::Greater
+            ),
+            Formula::atom(
+                Polynomial::integer(3) - Polynomial::variable(0),
+                Relation::GreaterOrEqual
+            ),
+        ])
+    );
+}
+
+#[test]
 fn merges_complete_sign_partitions_in_disjunctions() {
     let x = Polynomial::variable(0);
     let y = Polynomial::variable(1);

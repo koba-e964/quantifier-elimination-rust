@@ -1,0 +1,8 @@
+---
+source: tests/snapshots.rs
+expression: "run_cli(\"x^3 = 0\")"
+---
+status: exit status: 0
+stdout:
+x = 0
+stderr:

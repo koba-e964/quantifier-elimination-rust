@@ -1,0 +1,8 @@
+---
+source: tests/snapshots.rs
+expression: "run_cli(\"x^2 >= 4\")"
+---
+status: exit status: 0
+stdout:
+-4 + x^2 >= 0
+stderr:

@@ -130,6 +130,23 @@ fn bounds_the_reported_quadratic_baseline_regression() {
 }
 
 #[test]
+fn bounds_the_reported_cubic_regression() {
+    let child = Command::new(env!("CARGO_BIN_EXE_qe"))
+        .args([
+            "--max-cells=100",
+            "exists x. exists y. x^3+y^3=3*x*y&&k=x+y",
+        ])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let output = output_with_timeout(child, Duration::from_secs(2))
+        .expect("cubic symmetric elimination exceeded the two-second bound");
+
+    assert!(output.status.success());
+}
+
+#[test]
 fn prints_linear_multivariate_elimination_results() {
     let output = Command::new(env!("CARGO_BIN_EXE_qe"))
         .arg("exists x1. x0*x1 + x2*x1 - 1 = 0")
