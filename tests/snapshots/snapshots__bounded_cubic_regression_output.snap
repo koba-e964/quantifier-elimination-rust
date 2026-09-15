@@ -1,0 +1,8 @@
+---
+source: tests/snapshots.rs
+expression: "format!(\"status: {}\\nstdout:\\n{}stderr:\\n{}\", output.status,\nString::from_utf8_lossy(&output.stdout),\nString::from_utf8_lossy(&output.stderr),)"
+---
+status: exit status: 0
+stdout:
+((-1 - k > 0) && (-3*k^2 + k^3 >= 0)) || ((-1 - k < 0) && (-3*k^2 + k^3 <= 0)) || ((-1 - k = 0) && (k^3 = 0))
+stderr:

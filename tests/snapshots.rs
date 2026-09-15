@@ -1,4 +1,7 @@
 use std::process::Command;
+use std::process::{Output, Stdio};
+use std::thread::sleep;
+use std::time::{Duration, Instant};
 
 fn run_cli(formula: &str) -> String {
     run_cli_args([formula])
@@ -15,6 +18,26 @@ fn run_cli_args<const N: usize>(args: [&str; N]) -> String {
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr),
     )
+}
+
+fn run_cli_args_with_timeout<const N: usize>(args: [&str; N]) -> Output {
+    let mut child = Command::new(env!("CARGO_BIN_EXE_qe"))
+        .args(args)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let started = Instant::now();
+    loop {
+        if child.try_wait().unwrap().is_some() {
+            return child.wait_with_output().unwrap();
+        }
+        if started.elapsed() >= Duration::from_secs(2) {
+            child.kill().unwrap();
+            panic!("snapshot CLI command exceeded the two-second bound");
+        }
+        sleep(Duration::from_millis(10));
+    }
 }
 
 #[test]
@@ -124,6 +147,24 @@ fn snapshots_cubic_symmetric_output() {
     insta::assert_snapshot!(
         "cubic_symmetric_output",
         run_cli("exists x. exists y. x^3 + y^3 = 3*x*y && k = x+y")
+    );
+}
+
+#[test]
+fn snapshots_bounded_cubic_regression_output() {
+    let output = run_cli_args_with_timeout([
+        "--max-cells=100",
+        "exists x. exists y. x^3+y^3=3*x*y&&k=x+y",
+    ]);
+    assert!(output.status.success());
+    insta::assert_snapshot!(
+        "bounded_cubic_regression_output",
+        format!(
+            "status: {}\nstdout:\n{}stderr:\n{}",
+            output.status,
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr),
+        )
     );
 }
 

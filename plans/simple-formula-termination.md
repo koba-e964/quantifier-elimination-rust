@@ -81,7 +81,7 @@ returned.
 - [x] Add a bounded CLI regression for `exists x0. exists x1.
   x2=x0+x1 && x3=x0*x1 && x4=x0^2+x1^2` with
   `--special-handling=false --variable-order=x2,x3,x4`.
-- [ ] Add a bounded CLI regression for `exists x. exists y.
+- [x] Add a bounded CLI regression for `exists x. exists y.
   x^3+y^3=3*x*y && k=x+y`.
 - [x] Add a snapshot for `exists x. exists y. x+y=k &&
   x^2+x*y+y^2=1`, which implicitly determines `p = k^2 - 1` and should

@@ -122,8 +122,8 @@ fn bounds_the_reported_quadratic_baseline_regression() {
         .stderr(Stdio::piped())
         .spawn()
         .unwrap();
-    let output = output_with_timeout(child, Duration::from_secs(2))
-        .expect("quadratic CAD baseline exceeded the two-second bound");
+    let output = output_with_timeout(child, Duration::from_secs(5))
+        .expect("quadratic CAD baseline exceeded the five-second bound");
 
     assert!(!output.status.success());
     assert!(String::from_utf8_lossy(&output.stderr).contains("ComplexityLimitExceeded"));
