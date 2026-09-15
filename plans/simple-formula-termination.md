@@ -1,6 +1,6 @@
 # Termination for very simple formulae
 
-Current step: Step 2 — generalize symmetric reduction.
+Current step: Complete.
 
 ## Scope
 
