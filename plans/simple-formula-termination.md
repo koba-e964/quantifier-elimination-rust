@@ -73,7 +73,7 @@ returned.
 - [x] Add a bounded CAD complexity guard that reports the quantified variable,
   lifting order, projection level, and cell count when a case exceeds its
   configured budget.
-- [ ] Ensure special handling disabled remains a valid exact baseline and does
+- [x] Ensure special handling disabled remains a valid exact baseline and does
   not silently use a special rewrite.
 
 ## Step 4: Regression coverage
