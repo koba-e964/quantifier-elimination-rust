@@ -1,6 +1,6 @@
 # Automatic variable elimination order
 
-Current step: Step 2 — define automatic-order selection.
+Current step: Step 3 — implement adaptive exact selection.
 
 ## Objective
 
@@ -38,16 +38,17 @@ because `t*x` is a mixed quantified/free monomial while `y` is additive.
   sections.
 - [x] Preserve the existing score-based selector as the deterministic
   tie-breaker.
-- [ ] Define whether automatic selection may try a second exact order after a
-  supported lifting failure or budget rejection.
-- [ ] Keep explicit `--variable-order` as a strict user-requested order; do
+- [x] Define that automatic selection may try a second exact order after
+  `AlgebraicRootSampleUnsupported`; budget rejection remains a separate
+  decision because it can indicate a genuinely over-large problem.
+- [x] Keep explicit `--variable-order` as a strict user-requested order; do
   not silently reorder it.
 
 ## Step 3: Implement adaptive exact selection
 
-- [ ] Add the order-selection/adaptation logic in the quantifier evaluation
+- [x] Add the order-selection/adaptation logic in the quantifier evaluation
   layer rather than in the CLI parser.
-- [ ] Ensure every candidate attempt uses exact arithmetic and does not reuse
+- [x] Ensure every candidate attempt uses exact arithmetic and does not reuse
   partial CAD state from a failed order.
 - [ ] Record the selected order and attempted alternatives in stats when
   `--stats` is enabled.

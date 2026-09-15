@@ -280,25 +280,66 @@ fn eliminate_recursive(
             stats,
         )
     } else {
-        let mut variable_order = options
+        let variable_orders = options
             .variable_order
             .as_ref()
             .map(|order| {
-                select_variable_order_with_precedence(&reduced, &free_variables, *variable, order)
+                vec![select_variable_order_with_precedence(
+                    &reduced,
+                    &free_variables,
+                    *variable,
+                    order,
+                )]
             })
-            .unwrap_or_else(|| select_variable_order(&reduced, &free_variables, *variable));
-        variable_order.push(*variable);
-        let lifting = crate::cad::lifting::lift_recursive_with_limit(
-            &reduced,
-            &variable_order,
-            options.max_cells,
-        )?;
-        stats.record_recursive_lifting(&lifting);
-        lifting
-            .synthesize_quantifier(&body, *quantifier, *variable)
-            .map(|result| simplify(&result))
-            .map_err(QuantifierEvaluationError::from)
+            .unwrap_or_else(|| automatic_variable_orders(&reduced, &free_variables, *variable));
+        let mut last_retryable_error = None;
+        for mut variable_order in variable_orders {
+            variable_order.push(*variable);
+            let lifting = crate::cad::lifting::lift_recursive_with_limit(
+                &reduced,
+                &variable_order,
+                options.max_cells,
+            )?;
+            match lifting.synthesize_quantifier(&body, *quantifier, *variable) {
+                Ok(result) => {
+                    stats.record_recursive_lifting(&lifting);
+                    return Ok(simplify(&result));
+                }
+                Err(error) => {
+                    let error = QuantifierEvaluationError::from(error);
+                    if is_retryable_automatic_order_error(&error)
+                        && options.variable_order.is_none()
+                    {
+                        last_retryable_error = Some(error);
+                    } else {
+                        return Err(error);
+                    }
+                }
+            }
+        }
+        Err(last_retryable_error.expect("automatic order candidates are non-empty"))
     }
+}
+
+fn automatic_variable_orders(
+    formula: &Formula,
+    free_variables: &std::collections::BTreeSet<usize>,
+    quantified_variable: usize,
+) -> Vec<Vec<usize>> {
+    let preferred = select_variable_order(formula, free_variables, quantified_variable);
+    let fallback = free_variables.iter().copied().collect::<Vec<_>>();
+    if preferred == fallback {
+        vec![preferred]
+    } else {
+        vec![preferred, fallback]
+    }
+}
+
+fn is_retryable_automatic_order_error(error: &QuantifierEvaluationError) -> bool {
+    matches!(
+        error,
+        QuantifierEvaluationError::Formula(FormulaEvaluationError::AlgebraicRootSampleUnsupported)
+    )
 }
 
 fn select_variable_order(
