@@ -198,7 +198,7 @@ fn applies_symmetric_special_handling_before_cad() {
     assert!(output.status.success());
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),
-        "(-x2^2 + 2*x3 + x4 = 0) && (x2^2 - 4*x3 >= 0)\n"
+        "(x2^2 - 2*x3 - x4 = 0) && (x2^2 - 4*x3 >= 0)\n"
     );
     assert!(String::from_utf8_lossy(&output.stderr).contains("cells constructed: 0"));
 }
@@ -253,7 +253,7 @@ fn special_handling_finishes_the_reported_formula_within_threshold() {
     assert!(output.status.success());
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),
-        "(-x2^2 + 2*x3 + x4 = 0) && (x2^2 - 4*x3 >= 0)\n"
+        "(x2^2 - 2*x3 - x4 = 0) && (x2^2 - 4*x3 >= 0)\n"
     );
 }
 

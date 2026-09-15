@@ -4,5 +4,5 @@ expression: "run_cli(\"exists x. exists y. x+y=k && x^2+x*y+y^2=1\")"
 ---
 status: exit status: 0
 stdout:
--4 + 3*k^2 <= 0
+4 - 3*k^2 >= 0
 stderr:

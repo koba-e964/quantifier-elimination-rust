@@ -51,6 +51,19 @@ fn snapshots_quadratic_inequality_output() {
 }
 
 #[test]
+fn snapshots_bounded_affine_image_output() {
+    insta::assert_snapshot!(
+        "bounded_affine_image_output",
+        run_cli_args([
+            "--variable-order=x,y",
+            "--stats",
+            "--max-cells=1000",
+            "exists a. exists b. 0 <= a && a <= 1 && 0 <= b && b <= 1 && y = a*x + b",
+        ])
+    );
+}
+
+#[test]
 fn snapshots_universal_quadratic_strict_inequality_output() {
     insta::assert_snapshot!(
         "universal_quadratic_strict_inequality_output",

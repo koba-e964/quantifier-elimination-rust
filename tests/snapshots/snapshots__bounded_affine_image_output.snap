@@ -1,0 +1,18 @@
+---
+source: tests/snapshots.rs
+expression: "run_cli_args([\"--variable-order=x,y\", \"--stats\", \"--max-cells=1000\",\n\"exists a. exists b. 0 <= a && a <= 1 && 0 <= b && b <= 1 && y = a*x + b\",])"
+---
+status: exit status: 0
+stdout:
+((y < 0) && ((1 - y + x < 0) || ((1 + x > 0) && (y - x > 0)))) || ((y - x < 0) && (((y > 0) && (1 - x >= 0)) || (1 - y < 0))) || ((y - x = 0) && ((1 + x <= 0) || ((1 + x > 0) && (y < 0)) || (1 - y < 0))) || ((1 - y + x = 0) && ((y < 0) || ((1 - x > 0) && (1 - y < 0)) || (1 - x <= 0))) || ((y = 0) && ((1 - y + x <= 0) || (y - x = 0) || ((1 - x > 0) && (y - x < 0)) || (1 - x <= 0))) || ((1 - y = 0) && ((1 + x <= 0) || ((1 + x > 0) && (1 - y + x < 0)) || (1 - y + x = 0) || (y - x <= 0))) || ((1 - y > 0) && (((1 - y + x < 0) && (1 + x >= 0)) || ((y > 0) && ((1 + x < 0) || (1 - y + x = 0) || (y - x = 0) || (1 - x < 0))) || ((x > 0) && (y - x > 0)))) || ((1 - y + x > 0) && (((y - x > 0) && ((1 + x <= 0) || (y = 0) || (x = 0) || (1 - y = 0) || (1 - x <= 0))) || ((x < 0) && (y > 0)) || ((1 - x > 0) && (1 - y < 0))))
+stderr:
+stats:
+  quantifier calls: 2
+  cells constructed: 489
+  leaf cells: 427
+  sector cells: 276
+  section cells: 213
+  projection levels: 3
+  projection polynomials: 26
+  lifting order count: 1
+  lifting order 0: x -> y -> a
