@@ -95,6 +95,19 @@ fn reports_when_the_cell_budget_is_exceeded() {
 }
 
 #[test]
+fn reports_bounded_automatic_order_failure() {
+    let output = Command::new(env!("CARGO_BIN_EXE_qe"))
+        .args(["--max-cells=1", "exists t. y = t*x+t^2"])
+        .output()
+        .unwrap();
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("ComplexityLimitExceeded"));
+    assert!(stderr.contains("variable_order"));
+}
+
+#[test]
 fn disabled_special_handling_uses_the_bounded_cad_baseline() {
     let output = Command::new(env!("CARGO_BIN_EXE_qe"))
         .args([

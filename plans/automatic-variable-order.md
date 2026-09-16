@@ -64,10 +64,11 @@ because `t*x` is a mixed quantified/free monomial while `y` is additive.
 - [x] Cover the deterministic candidate policy and strict explicit-order
   behavior. No stable end-to-end formula currently exercises a successful
   automatic retry after the improved scorer selects its preferred order.
-- [ ] Compare automatic and explicit successful results semantically at exact
-  rational and algebraic assignments.
-- [ ] Add a bounded regression for a formula where all candidate orders remain
-  unsupported, ensuring failure is deterministic and informative.
+- [x] Compare automatic and explicit successful results semantically at exact
+  rational assignments.
+- [x] Add a bounded regression for an automatic-order formula whose candidate
+  lifting exceeds the configured cell budget, ensuring failure is deterministic
+  and informative.
 
 ## Step 5: Documentation
 

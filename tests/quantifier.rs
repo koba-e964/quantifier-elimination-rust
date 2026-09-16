@@ -277,6 +277,45 @@ fn special_vieta_rule_matches_general_cad() {
 }
 
 #[test]
+fn automatic_order_matches_explicit_order_at_exact_rational_points() {
+    let x = Polynomial::variable(0);
+    let y = Polynomial::variable(1);
+    let t = Polynomial::variable(2);
+    let formula = Formula::exists(
+        2,
+        Formula::atom(y - t.clone() * x - t.clone() * t, Relation::Equal),
+    );
+
+    let automatic = eliminate_with_options(&formula, EliminationOptions::default())
+        .unwrap()
+        .0;
+    let explicit = eliminate_with_options(
+        &formula,
+        EliminationOptions {
+            variable_order: Some(vec![0, 1]),
+            ..EliminationOptions::default()
+        },
+    )
+    .unwrap()
+    .0;
+    assert_eq!(automatic, explicit);
+
+    for (x_value, y_value, expected) in [
+        (0, 0, true),
+        (1, 0, true),
+        (0, -1, false),
+        (1, -1, false),
+        (1, 1, true),
+    ] {
+        let mut values = BTreeMap::new();
+        values.insert(0, BigRational::from_integer(x_value.into()));
+        values.insert(1, BigRational::from_integer(y_value.into()));
+        assert_eq!(automatic.evaluate(&values), Some(expected));
+        assert_eq!(explicit.evaluate(&values), Some(expected));
+    }
+}
+
+#[test]
 fn special_vieta_rule_handles_an_implicit_product() {
     let x = Polynomial::variable(0);
     let y = Polynomial::variable(1);
