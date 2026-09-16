@@ -1,6 +1,6 @@
 # Automatic variable elimination order
 
-Current step: Step 3 — implement adaptive exact selection.
+Status: Complete.
 
 ## Objective
 
