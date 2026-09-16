@@ -108,6 +108,14 @@ fn snapshots_unbounded_quadratic_inequality_output() {
 }
 
 #[test]
+fn snapshots_automatic_variable_order_output() {
+    insta::assert_snapshot!(
+        "automatic_variable_order_output",
+        run_cli_args(["--stats", "exists t. y = t*x+t^2"])
+    );
+}
+
+#[test]
 fn snapshots_nested_quantifier_output() {
     insta::assert_snapshot!(
         "nested_quantifier_output",

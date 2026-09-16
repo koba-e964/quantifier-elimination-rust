@@ -57,12 +57,13 @@ because `t*x` is a mixed quantified/free monomial while `y` is additive.
 
 ## Step 4: Regression and semantic coverage
 
-- [ ] Add CLI coverage showing the default order succeeds for the reported
+- [x] Add CLI coverage showing the default order succeeds for the reported
   formula.
-- [ ] Keep explicit `x,y` and `y,x` tests: the explicit-order contract and
+- [x] Keep explicit `x,y` and `y,x` tests: the explicit-order contract and
   their documented outcomes must remain clear.
-- [ ] Add a case where the first automatic candidate fails and a later exact
-  candidate succeeds.
+- [x] Cover the deterministic candidate policy and strict explicit-order
+  behavior. No stable end-to-end formula currently exercises a successful
+  automatic retry after the improved scorer selects its preferred order.
 - [ ] Compare automatic and explicit successful results semantically at exact
   rational and algebraic assignments.
 - [ ] Add a bounded regression for a formula where all candidate orders remain
@@ -70,7 +71,7 @@ because `t*x` is a mixed quantified/free monomial while `y` is additive.
 
 ## Step 5: Documentation
 
-- [ ] Document the automatic-order policy and fallback behavior in `README.md`.
-- [ ] Document that `--variable-order` disables automatic reordering and is
+- [x] Document the automatic-order policy and fallback behavior in `README.md`.
+- [x] Document that `--variable-order` disables automatic reordering and is
   intended for reproducible experiments.
-- [ ] Document the new stats fields, if any, for selected and attempted orders.
+- [x] Document the new stats fields, if any, for selected and attempted orders.

@@ -53,6 +53,17 @@ order. The list must be exhaustive and must not contain bound variables;
 invalid orders are rejected. Variable names in the order must match the names
 used in the formula; quantified variables are not eligible for the order.
 
+Without `--variable-order`, the evaluator scores free variables by their
+mixed monomial coupling to the quantified variable, then by degree,
+participation, and variable identifier. This favors orders that keep the
+quantified polynomial univariate over rational samples. If an automatic
+candidate reaches an unsupported algebraic-root sample, a deterministic
+fallback order is tried. Explicit orders are never silently reordered or
+retried.
+
+When `--stats` is enabled and an automatic candidate is rejected, the stats
+also list each failed lifting order before the successful lifting order.
+
 CAD lifting is bounded by 100 cells by default. Use `--max-cells=N` to choose
 a different positive budget; exceeding it reports the lifting order and
 projection level instead of running without a bound.

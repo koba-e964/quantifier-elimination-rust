@@ -300,6 +300,20 @@ fn automatically_prefers_a_mixed_variable_before_an_additive_variable() {
 }
 
 #[test]
+fn explicit_order_does_not_retry_with_another_order() {
+    let output = Command::new(env!("CARGO_BIN_EXE_qe"))
+        .args(["--variable-order=y,x", "exists t. y = t*x+t^2"])
+        .output()
+        .unwrap();
+
+    assert!(!output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "qe: elimination error: Formula(AlgebraicRootSampleUnsupported)\n"
+    );
+}
+
+#[test]
 fn rejects_duplicate_named_variable_order_entries() {
     let output = Command::new(env!("CARGO_BIN_EXE_qe"))
         .args(["--variable-order=st,st", "exists x. x^2 + st + y = 0"])

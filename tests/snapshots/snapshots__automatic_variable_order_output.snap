@@ -1,0 +1,18 @@
+---
+source: tests/snapshots.rs
+expression: "run_cli_args([\"--stats\", \"exists t. y = t*x+t^2\"])"
+---
+status: exit status: 0
+stdout:
+4*y + x^2 >= 0
+stderr:
+stats:
+  quantifier calls: 1
+  cells constructed: 59
+  leaf cells: 43
+  sector cells: 38
+  section cells: 21
+  projection levels: 3
+  projection polynomials: 14
+  lifting order count: 1
+  lifting order 0: x -> y -> t
