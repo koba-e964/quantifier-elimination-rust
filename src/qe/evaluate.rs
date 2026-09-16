@@ -32,6 +32,7 @@ pub struct EliminationStats {
     pub projection_levels: usize,
     pub projection_polynomials: usize,
     pub lifting_orders: Vec<Vec<usize>>,
+    pub failed_lifting_orders: Vec<Vec<usize>>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -310,6 +311,7 @@ fn eliminate_recursive(
                     if is_retryable_automatic_order_error(&error)
                         && options.variable_order.is_none()
                     {
+                        stats.failed_lifting_orders.push(variable_order.clone());
                         last_retryable_error = Some(error);
                     } else {
                         return Err(error);

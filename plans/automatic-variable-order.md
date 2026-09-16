@@ -50,8 +50,8 @@ because `t*x` is a mixed quantified/free monomial while `y` is additive.
   layer rather than in the CLI parser.
 - [x] Ensure every candidate attempt uses exact arithmetic and does not reuse
   partial CAD state from a failed order.
-- [ ] Record the selected order and attempted alternatives in stats when
-  `--stats` is enabled.
+- [x] Record rejected automatic alternatives and the selected order in stats
+  when `--stats` is enabled; ordinary one-attempt stats remain unchanged.
 - [ ] Return the original error with useful order context when no candidate is
   supported.
 

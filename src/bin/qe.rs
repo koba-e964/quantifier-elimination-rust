@@ -246,6 +246,32 @@ fn validate_variable_order(
 }
 
 fn format_stats(stats: &EliminationStats, names: &VariableNames) -> String {
+    let failed_lifting_orders = if stats.failed_lifting_orders.is_empty() {
+        String::new()
+    } else {
+        let failed_order_lines = stats
+            .failed_lifting_orders
+            .iter()
+            .enumerate()
+            .map(|(index, order)| {
+                format!(
+                    "\n  failed lifting order {}: {}",
+                    index,
+                    order
+                        .iter()
+                        .map(|variable| names.name(*variable))
+                        .collect::<Vec<_>>()
+                        .join(" -> ")
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("");
+        format!(
+            "\n  failed lifting order count: {}{}",
+            stats.failed_lifting_orders.len(),
+            failed_order_lines
+        )
+    };
     let lifting_orders = if stats.lifting_orders.is_empty() {
         String::new()
     } else {
@@ -273,7 +299,7 @@ fn format_stats(stats: &EliminationStats, names: &VariableNames) -> String {
         )
     };
     format!(
-        "stats:\n  quantifier calls: {}\n  cells constructed: {}\n  leaf cells: {}\n  sector cells: {}\n  section cells: {}\n  projection levels: {}\n  projection polynomials: {}{}",
+        "stats:\n  quantifier calls: {}\n  cells constructed: {}\n  leaf cells: {}\n  sector cells: {}\n  section cells: {}\n  projection levels: {}\n  projection polynomials: {}{}{}",
         stats.quantifier_calls,
         stats.cells_constructed,
         stats.leaf_cells,
@@ -281,6 +307,7 @@ fn format_stats(stats: &EliminationStats, names: &VariableNames) -> String {
         stats.section_cells,
         stats.projection_levels,
         stats.projection_polynomials,
+        failed_lifting_orders,
         lifting_orders,
     )
 }
